@@ -1,4 +1,4 @@
-package service.handlers;
+package org.example.service.handlers;
 
 public class NutritionStepHandlerTest {
 }

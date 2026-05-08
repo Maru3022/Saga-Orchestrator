@@ -1,4 +1,4 @@
-package service.handlers;
+package org.example.service.handlers;
 
 import org.apache.commons.lang.ObjectUtils;
 import org.example.model.SagaEvent;
@@ -43,7 +43,7 @@ public class TrainsStepHandlerTest {
 
         ArgumentCaptor<SagaEvent> captor = ArgumentCaptor.forClass(SagaEvent.class);
         verify(kafkaTemplate).send(eq("saga-trains-command"),captor.capture());
-        assertThat(captor.getValue().getSagaId()).isEqualTo("ROLLBACK");
+        assertThat(captor.getValue().getStatus()).isEqualTo("ROLLBACK");
     }
 
     @Test

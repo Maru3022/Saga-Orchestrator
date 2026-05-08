@@ -1,4 +1,4 @@
-package repository;
+package org.example.repository;
 
 import org.example.model.SagaState;
 import org.example.repository.SagaStateRepository;

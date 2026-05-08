@@ -1,4 +1,4 @@
-package config;
+package org.example.config;
 
 import org.apache.kafka.clients.admin.NewTopic;
 import org.junit.jupiter.api.Test;

@@ -1,4 +1,4 @@
-package controller;
+package org.example.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.example.controller.SagaController;
