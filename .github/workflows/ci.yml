@@ -9,7 +9,6 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
   JDK_VERSION: '17'
 
 jobs:
@@ -58,8 +57,8 @@ jobs:
 
       - name: Build Docker image
         run: |
-          IMAGE_NAME_LOWER=$(echo "${{ env.IMAGE_NAME }}" | tr '[:upper:]' '[:lower:]')
-          docker build -t ${IMAGE_NAME_LOWER}:${{ github.sha }} .
+          IMAGE_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          docker build -t ${IMAGE_NAME}:${{ github.sha }} .
 
       - name: Log in to GitHub Container Registry
         if: github.ref == 'refs/heads/main'
@@ -72,7 +71,8 @@ jobs:
       - name: Push Docker image
         if: github.ref == 'refs/heads/main'
         run: |
-          IMAGE_NAME_LOWER=$(echo "${{ env.IMAGE_NAME }}" | tr '[:upper:]' '[:lower:]')
-          docker tag ${IMAGE_NAME_LOWER}:${{ github.sha }} \
-                     ${{ env.REGISTRY }}/${IMAGE_NAME_LOWER}:latest
-          docker push ${{ env.REGISTRY }}/${IMAGE_NAME_LOWER}:latest
+          IMAGE_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          docker tag ${IMAGE_NAME}:${{ github.sha }} ${{ env.REGISTRY }}/${IMAGE_NAME}:latest
+          docker tag ${IMAGE_NAME}:${{ github.sha }} ${{ env.REGISTRY }}/${IMAGE_NAME}:${{ github.sha }}
+          docker push ${{ env.REGISTRY }}/${IMAGE_NAME}:latest
+          docker push ${{ env.REGISTRY }}/${IMAGE_NAME}:${{ github.sha }}
