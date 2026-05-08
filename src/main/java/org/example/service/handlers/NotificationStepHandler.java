@@ -8,28 +8,29 @@ import org.springframework.stereotype.Component;
 
 @Component
 @Slf4j
-public class TrainsStepHandler implements StepHandler {
+public class NotificationStepHandler implements StepHandler {
 
-    public static final String STEP = "TRAINS";
+    public static final String STEP = "NOTIFICATION";
 
     @Autowired
     private KafkaTemplate<String, SagaEvent> kafkaTemplate;
 
     @Override
     public void processForward(SagaEvent event){
-        log.info("Forward TRAINS step for saga {}", event.getSagaId());
-        kafkaTemplate.send("saga-trains-command",event);
+        log.info("Forward NOTIFICATION step for saga: {}", event.getSagaId());
+        kafkaTemplate.send("saga-notification-command", event);
     }
 
     @Override
     public void processRollback(SagaEvent event){
-        log.info("Rollback TRAINS step for saga {}", event.getSagaId());
-        SagaEvent rollbackEvent = new SagaEvent(event.getSagaId(), STEP, "ROLLBACK", event.getData());
-        kafkaTemplate.send("saga-trains-command",rollbackEvent);
+        log.info("Rollback NOTIFICATION step for saga: {}", event.getSagaId());
+        SagaEvent rollbackEvent = new SagaEvent(event.getSagaId(), STEP, "ROLLBACK", event.getSagaId());
+        kafkaTemplate.send("saga-notification-command", rollbackEvent);
     }
 
     @Override
-    public String getStepName(){
+    public String getStepName() {
         return STEP;
     }
+
 }
