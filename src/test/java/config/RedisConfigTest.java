@@ -1,4 +1,4 @@
-package config;
+package org.example.config;
 
 import org.example.config.RedisConfig;
 import org.example.model.SagaState;

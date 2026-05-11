@@ -1,4 +1,4 @@
-package service.handlers;
+package org.example.service.handlers;
 
 import org.example.model.SagaEvent;
 import org.example.service.handlers.NutritionStepHandler;

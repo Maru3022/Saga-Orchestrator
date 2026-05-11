@@ -1,4 +1,4 @@
-package service;
+package org.example.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;

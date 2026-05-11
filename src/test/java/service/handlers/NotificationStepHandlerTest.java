@@ -1,4 +1,4 @@
-package service.handlers;
+package org.example.service.handlers;
 
 import jakarta.inject.Inject;
 import org.example.model.SagaEvent;
