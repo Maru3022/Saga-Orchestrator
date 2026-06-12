@@ -41,6 +41,47 @@ public class SagaOrchestrator {
         return state;
     }
 
+    public void handleEvent(SagaEvent event) {
+        if (event == null || event.getSagaId() == null) {
+            log.error("Invalid saga event received");
+            return;
+        }
+
+        log.info("Handling saga event for sagaId: {}, step: {}, status: {}",
+                event.getSagaId(), event.getStepName(), event.getStatus());
+
+        SagaState state = repository.findById(event.getSagaId()).orElse(null);
+        if (state == null) {
+            log.error("Saga state not found for sagaId: {}", event.getSagaId());
+            return;
+        }
+
+        if ("SUCCESS".equals(event.getStatus())) {
+            int currentIndex = -1;
+            for (int i = 0; i < handlers.size(); i++) {
+                if (handlers.get(i).getStepName().equalsIgnoreCase(event.getStepName())) {
+                    currentIndex = i;
+                    break;
+                }
+            }
+
+            if (currentIndex != -1 && currentIndex + 1 < handlers.size()) {
+                StepHandler nextHandler = handlers.get(currentIndex + 1);
+                state.setCurrentStep(nextHandler.getStepName());
+                repository.save(state);
+
+                SagaEvent nextEvent = new SagaEvent(state.getSagaId(), nextHandler.getStepName(), "START", event.getData());
+                nextHandler.processForward(nextEvent);
+            } else {
+                state.setStatus(SagaState.STATUS_COMPLETED);
+                repository.save(state);
+                log.info("Saga {} successfully completed!", state.getSagaId());
+            }
+        } else if ("FAILED".equals(event.getStatus()) || "ROLLBACK".equals(event.getStatus())) {
+            failAndRollback(state, "Saga step failed: " + event.getStepName());
+        }
+    }
+
     public void failAndRollback(SagaState state, String reason) {
         if (state == null) return;
 
