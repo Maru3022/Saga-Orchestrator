@@ -1,6 +1,7 @@
 package controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.example.SagaOrchestratorApplication;
 import org.example.controller.SagaController;
 import org.example.model.SagaState;
 import org.example.repository.SagaStateRepository;
@@ -12,6 +13,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.Map;
@@ -22,7 +24,8 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(SagaController.class)
+@WebMvcTest(controllers = SagaController.class)
+@ContextConfiguration(classes = SagaOrchestratorApplication.class)
 @ActiveProfiles("test")
 class SagaControllerTest {
 
