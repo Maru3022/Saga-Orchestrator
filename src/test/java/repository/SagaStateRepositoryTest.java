@@ -1,68 +1,74 @@
-package org.example.repository;
+package repository;
 
 import org.example.model.SagaState;
 import org.example.repository.SagaStateRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 
-import java.util.Map;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
-public class SagaStateRepositoryTest {
+class SagaStateRepositoryTest {
 
-    @Mock
     private RedisTemplate<String, SagaState> redisTemplate;
-
-    @Mock
     private ValueOperations<String, SagaState> valueOperations;
-
-    @InjectMocks
     private SagaStateRepository repository;
 
     @BeforeEach
+    @SuppressWarnings("unchecked")
     void setUp() {
-        MockitoAnnotations.openMocks(this);
+        redisTemplate = mock(RedisTemplate.class);
+        valueOperations = mock(ValueOperations.class);
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        repository = new SagaStateRepository(redisTemplate);
     }
 
     @Test
-    void shouldSaveSagaState() {
-        SagaState sagaState = new SagaState("TEST", Map.of());
-        sagaState.setSagaId("saga-1");
+    void testSave() {
+        SagaState state = new SagaState();
+        state.setSagaId("saga-123");
 
-        repository.save(sagaState);
-
-        ArgumentCaptor<String> keyCaptor = ArgumentCaptor.forClass(String.class);
-        verify(valueOperations).set(keyCaptor.capture(), eq(sagaState));
-        assertThat(keyCaptor.getValue()).isEqualTo("saga:state:saga-1");
+        repository.save(state);
+        verify(valueOperations, times(1)).set(eq("saga:state:saga-123"), eq(state), any());
     }
 
     @Test
-    void shouldFindById(){
-        SagaState state = new SagaState("TEST", Map.of());
-        state.setSagaId("saga-2");
-        when(valueOperations.get("saga:state:saga-2")).thenReturn(state);
+    void testFindById() {
+        SagaState state = new SagaState();
+        state.setSagaId("saga-123");
 
-        SagaState found = repository.findById("saga-2").orElse(null);
+        when(valueOperations.get("saga:state:saga-123")).thenReturn(state);
+        Optional<SagaState> result = repository.findById("saga-123");
 
-        assertThat(found).isNotNull();
-        assertThat(found.getSagaId()).isEqualTo("saga-2");
+        assertTrue(result.isPresent());
+        assertEquals("saga-123", result.get().getSagaId());
     }
 
     @Test
-    void shouldDeleteSagaState(){
-        repository.delete("saga-3");
-        verify(redisTemplate).delete(eq("saga:state:saga-3"));
+    void testFindAllInProgress() {
+        when(redisTemplate.keys("saga:state:*")).thenReturn(Set.of("saga:state:saga-123"));
+
+        SagaState state = new SagaState();
+        state.setSagaId("saga-123");
+        state.setStatus(SagaState.STATUS_IN_PROGRESS);
+
+        when(valueOperations.get("saga:state:saga-123")).thenReturn(state);
+        List<SagaState> result = repository.findAllInProgress();
+
+        assertEquals(1, result.size());
     }
 
+    @Test
+    void testDelete() {
+        repository.delete("saga-123");
+        verify(redisTemplate, times(1)).delete("saga:state:saga-123");
+    }
 }

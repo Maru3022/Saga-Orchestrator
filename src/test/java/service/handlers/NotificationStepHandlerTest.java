@@ -1,22 +1,23 @@
-package org.example.service.handlers;
+package service.handlers;
 
-import jakarta.inject.Inject;
 import org.example.model.SagaEvent;
 import org.example.service.handlers.NotificationStepHandler;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.MockitoAnnotations;
 import org.springframework.kafka.core.KafkaTemplate;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
-@ExtendWith(MockitoExtension.class)
-public class NotificationStepHandlerTest {
+class NotificationStepHandlerTest {
 
     @Mock
     private KafkaTemplate<String, SagaEvent> kafkaTemplate;
@@ -24,23 +25,27 @@ public class NotificationStepHandlerTest {
     @InjectMocks
     private NotificationStepHandler handler;
 
-    @Test
-    void shouldProcessForward(){
-        SagaEvent sagaEvent = new SagaEvent("saga-1","NOTIFICATION","EXECUTE",null);
-        handler.processForward(sagaEvent);
-        verify(kafkaTemplate).send(eq("saga-notification-command"),any(SagaEvent.class));
+    @BeforeEach
+    void setUp() {
+        MockitoAnnotations.openMocks(this);
     }
 
     @Test
-    void shouldProcessRollBack(){
-        SagaEvent event = new SagaEvent("saga-2","NOTIFICATION","ROLLBACK","data");
+    void testGetStepName() {
+        assertEquals("NOTIFICATION", handler.getStepName());
+    }
+
+    @Test
+    void testProcessForward() {
+        SagaEvent event = new SagaEvent("saga-1", "NOTIFICATION", "START", Map.of("key", "value"));
+        handler.processForward(event);
+        verify(kafkaTemplate, times(1)).send(eq("saga-notification-command"), eq(event));
+    }
+
+    @Test
+    void testProcessRollback() {
+        SagaEvent event = new SagaEvent("saga-1", "NOTIFICATION", "START", Map.of("key", "value"));
         handler.processRollback(event);
-        verify(kafkaTemplate).send(eq("saga-notification-command"),any(SagaEvent.class));
+        verify(kafkaTemplate, times(1)).send(eq("saga-notification-command"), any(SagaEvent.class));
     }
-
-    @Test
-    void shouldReturnStepName(){
-        assertThat(handler.getStepName()).isEqualTo("NOTIFICATION");
-    }
-
 }

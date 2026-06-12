@@ -1,37 +1,53 @@
 package org.example.model;
 
+import java.io.Serializable;
 import java.util.Map;
-import java.util.UUID;
 
-public class SagaEvent {
-    private String eventId;
+public class SagaEvent implements Serializable {
+
     private String sagaId;
-    private String step;
+    private String stepName;
     private String status;
     private Map<String, Object> data;
 
     public SagaEvent() {}
 
-    public SagaEvent(String sagaId, String step, String status, Map<String, Object> data) {
-        this.eventId = UUID.randomUUID().toString();
+    public SagaEvent(String sagaId, String stepName, String status, Map<String, Object> data) {
         this.sagaId = sagaId;
-        this.step = step;
+        this.stepName = stepName;
         this.status = status;
         this.data = data;
     }
 
-    public String getEventId() { return eventId; }
-    public void setEventId(String eventId) { this.eventId = eventId; }
+    public String getSagaId() {
+        return sagaId;
+    }
 
-    public String getSagaId() { return sagaId; }
-    public void setSagaId(String sagaId) { this.sagaId = sagaId; }
+    public void setSagaId(String sagaId) {
+        this.sagaId = sagaId;
+    }
 
-    public String getStep() { return step; }
-    public void setStep(String step) { this.step = step; }
+    public String getStepName() {
+        return stepName;
+    }
 
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
+    public void setStepName(String stepName) {
+        this.stepName = stepName;
+    }
 
-    public Map<String, Object> getData() { return data; }
-    public void setData(Map<String, Object> data) { this.data = data; }
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public Map<String, Object> getData() {
+        return data;
+    }
+
+    public void setData(Map<String, Object> data) {
+        this.data = data;
+    }
 }
