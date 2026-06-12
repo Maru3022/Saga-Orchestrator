@@ -1,4 +1,4 @@
-package org.example.repository;
+package org.example.service.handlers;
 
 import org.example.model.SagaState;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -7,7 +7,6 @@ import org.springframework.stereotype.Repository;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
@@ -40,10 +39,14 @@ public class SagaStateRepository {
         }
         for (String key : keys) {
             SagaState state = redisTemplate.opsForValue().get(key);
-            if (state != null && Objects.equals(SagaState.STATUS_IN_PROGRESS, state.getStatus())) {
+            if (state != null && SagaState.STATUS_IN_PROGRESS.equals(state.getStatus())) {
                 result.add(state);
             }
         }
         return result;
+    }
+
+    public void delete(String sagaId) {
+        redisTemplate.delete(KEY_PREFIX + sagaId);
     }
 }

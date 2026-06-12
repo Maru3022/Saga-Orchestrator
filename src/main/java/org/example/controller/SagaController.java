@@ -1,13 +1,11 @@
 package org.example.controller;
 
 import org.example.model.SagaState;
+import org.example.repository.SagaStateRepository;
 import org.example.service.SagaOrchestrator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
@@ -18,9 +16,19 @@ public class SagaController {
     @Autowired
     private SagaOrchestrator orchestrator;
 
+    @Autowired
+    private SagaStateRepository sagaStateRepository;
+
     @PostMapping("/create-program")
     public ResponseEntity<SagaState> createProgram(@RequestBody Map<String, Object> payload) {
-        SagaState state = orchestrator.startSaga("CREATE_PROGRAM", payload);
+        SagaState state = orchestrator.startSaga(SagaOrchestrator.SAGA_TYPE, payload);
         return ResponseEntity.accepted().body(state);
+    }
+
+    @GetMapping("/{sagaId}")
+    public ResponseEntity<SagaState> getSaga(@PathVariable String sagaId) {
+        return sagaStateRepository.findById(sagaId)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 }

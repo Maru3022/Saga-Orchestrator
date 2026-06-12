@@ -8,33 +8,48 @@ import org.springframework.kafka.config.TopicBuilder;
 @Configuration
 public class KafkaConfig {
 
-    @Bean(name = "saga-trains-command")
+    @Bean
+    public NewTopic userCreatedTopic() {
+        return TopicBuilder.name("user.created").partitions(3).replicas(1).build();
+    }
+
+    @Bean
+    public NewTopic userCommandTopic() {
+        return TopicBuilder.name("saga-user-command").partitions(3).replicas(1).build();
+    }
+
+    @Bean
+    public NewTopic userResponseTopic() {
+        return TopicBuilder.name("saga-user-response").partitions(3).replicas(1).build();
+    }
+
+    @Bean
     public NewTopic trainsCommandTopic() {
         return TopicBuilder.name("saga-trains-command").partitions(3).replicas(1).build();
     }
 
-    @Bean(name = "saga-nutrition-command")
-    public NewTopic nutritionCommandTopic(){
+    @Bean
+    public NewTopic nutritionCommandTopic() {
         return TopicBuilder.name("saga-nutrition-command").partitions(3).replicas(1).build();
     }
 
-    @Bean(name = "saga-notification-command")
-    public NewTopic notificationCommandTopic(){
+    @Bean
+    public NewTopic notificationCommandTopic() {
         return TopicBuilder.name("saga-notification-command").partitions(3).replicas(1).build();
     }
 
-    @Bean(name = "saga-trains-response")
-    public NewTopic trainsResponseTopic(){
+    @Bean
+    public NewTopic trainsResponseTopic() {
         return TopicBuilder.name("saga-trains-response").partitions(3).replicas(1).build();
     }
 
-    @Bean(name = "saga-nutrition-response")
-    public NewTopic nutritionResponseTopic(){
+    @Bean
+    public NewTopic nutritionResponseTopic() {
         return TopicBuilder.name("saga-nutrition-response").partitions(3).replicas(1).build();
     }
 
-    @Bean(name = "saga-notification-response")
-    public NewTopic notificationResponseTopic(){
+    @Bean
+    public NewTopic notificationResponseTopic() {
         return TopicBuilder.name("saga-notification-response").partitions(3).replicas(1).build();
     }
 }
