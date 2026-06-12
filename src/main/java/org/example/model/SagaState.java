@@ -1,4 +1,4 @@
-﻿package org.example.model;
+package org.example.model;
 
 import java.io.Serializable;
 import java.time.Instant;
