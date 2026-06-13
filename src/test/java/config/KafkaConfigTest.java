@@ -8,6 +8,8 @@ import org.springframework.kafka.test.context.EmbeddedKafka;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -22,17 +24,57 @@ public class KafkaConfigTest {
     @Autowired
     private Map<String, NewTopic> topics;
 
-    @Test
-    void shouldCreateCommandTopics(){
-        assertThat(topics).containsKey("saga-trains-command");
-        assertThat(topics.get("saga-trains-command").name()).isEqualTo("saga-trains-command");
-        assertThat(topics.get("saga-trains-command").numPartitions()).isEqualTo(3);
+    private Set<String> topicNames() {
+        return topics.values().stream()
+                .map(NewTopic::name)
+                .collect(Collectors.toSet());
     }
 
     @Test
-    void shouldCreateResponseTopics(){
-        assertThat(topics).containsKey("saga-trains-response");
-        assertThat(topics).containsKey("saga-nutrition-response");
-        assertThat(topics).containsKey("saga-notification-response");
+    void shouldCreateCommandTopics() {
+        Set<String> names = topicNames();
+
+        assertThat(names).contains(
+                "saga-trains-command",
+                "saga-nutrition-command",
+                "saga-notification-command",
+                "saga-user-command"
+        );
+
+        NewTopic trainsCommand = findByName("saga-trains-command");
+        assertThat(trainsCommand.numPartitions()).isEqualTo(3);
+        assertThat(trainsCommand.replicationFactor()).isEqualTo((short) 1);
+    }
+
+    @Test
+    void shouldCreateResponseTopics() {
+        Set<String> names = topicNames();
+
+        assertThat(names).contains(
+                "saga-trains-response",
+                "saga-nutrition-response",
+                "saga-notification-response",
+                "saga-user-response"
+        );
+    }
+
+    @Test
+    void shouldCreateUserCreatedTopic() {
+        assertThat(topicNames()).contains("user.created");
+    }
+
+    @Test
+    void shouldNotHaveDuplicateOrBlankTopicNames() {
+        var names = topics.values().stream().map(NewTopic::name).toList();
+
+        assertThat(names).doesNotHaveDuplicates();
+        assertThat(names).allSatisfy(name -> assertThat(name).isNotBlank());
+    }
+
+    private NewTopic findByName(String topicName) {
+        return topics.values().stream()
+                .filter(t -> t.name().equals(topicName))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("Topic not found: " + topicName));
     }
 }
