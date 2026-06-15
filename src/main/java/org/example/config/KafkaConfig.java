@@ -44,6 +44,46 @@ public class KafkaConfig {
         return TopicBuilder.name("saga.nutrition.response").partitions(3).replicas(1).build();
     }
 
+    @Bean
+    public NewTopic sagaNotificationCommandTopic() {
+        return TopicBuilder.name("saga-notification-command").partitions(3).replicas(1).build();
+    }
+
+    @Bean
+    public NewTopic sagaNutritionCommandTopic() {
+        return TopicBuilder.name("saga-nutrition-command").partitions(3).replicas(1).build();
+    }
+
+    @Bean
+    public NewTopic sagaNotificationResponseHyphenTopic() {
+        return TopicBuilder.name("saga-notification-response").partitions(3).replicas(1).build();
+    }
+
+    @Bean
+    public NewTopic sagaNutritionResponseHyphenTopic() {
+        return TopicBuilder.name("saga-nutrition-response").partitions(3).replicas(1).build();
+    }
+
+    @Bean
+    public NewTopic sagaTrainsResponseTopic() {
+        return TopicBuilder.name("saga-trains-response").partitions(3).replicas(1).build();
+    }
+
+    @Bean
+    public NewTopic sagaUserResponseTopic() {
+        return TopicBuilder.name("saga-user-response").partitions(3).replicas(1).build();
+    }
+
+    @Bean
+    public NewTopic sagaTrainsCommandTopic() {
+        return TopicBuilder.name("saga-trains-command").partitions(3).replicas(1).build();
+    }
+
+    @Bean
+    public NewTopic sagaUserCommandTopic() {
+        return TopicBuilder.name("saga-user-command").partitions(3).replicas(1).build();
+    }
+
     // Compensation topics
     @Bean
     public NewTopic sagaNotificationCompensateTopic() {

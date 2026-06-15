@@ -16,7 +16,7 @@ public interface SagaInstanceRepository extends JpaRepository<SagaInstance, UUID
 
     boolean existsByCorrelationId(String correlationId);
 
-    List<SagaInstance> findByStatus(SagaStatus status);
+    List<SagaInstance> findByState(SagaStatus state);
 
     List<SagaInstance> findByUserId(String userId);
 }

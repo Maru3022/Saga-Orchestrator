@@ -60,7 +60,7 @@ public class KafkaConfigTest {
 
     @Test
     void shouldCreateUserCreatedTopic() {
-        assertThat(topicNames()).contains("user.created");
+        assertThat(topicNames()).contains("saga.user.created");
     }
 
     @Test

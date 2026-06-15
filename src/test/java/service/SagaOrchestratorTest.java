@@ -31,7 +31,12 @@ class SagaOrchestratorTest {
         when(stepHandler1.getStepName()).thenReturn("TRAINS");
         when(stepHandler2.getStepName()).thenReturn("NUTRITION");
 
-        orchestrator = new SagaOrchestrator(repository, List.of(stepHandler1, stepHandler2));
+        var sagaInstanceRepository = mock(org.example.repository.SagaInstanceRepository.class);
+        var kafkaTemplate = mock(org.springframework.kafka.core.KafkaTemplate.class);
+        var objectMapper = mock(com.fasterxml.jackson.databind.ObjectMapper.class);
+
+        orchestrator = new SagaOrchestrator(sagaInstanceRepository, repository, kafkaTemplate, objectMapper,
+            List.of(stepHandler1, stepHandler2));
     }
 
     @Test

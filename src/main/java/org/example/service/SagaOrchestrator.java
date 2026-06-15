@@ -6,12 +6,15 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.model.*;
 import org.example.repository.SagaInstanceRepository;
 import org.example.repository.SagaStateRepository;
+import org.example.service.handlers.StepHandler;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 @Slf4j
@@ -25,6 +28,7 @@ public class SagaOrchestrator {
     private final SagaStateRepository sagaStateRepository;
     private final KafkaTemplate<String, String> kafkaTemplate;
     private final ObjectMapper objectMapper;
+    private final List<StepHandler> stepHandlers;
 
     @Transactional
     public void startSaga(UserCreatedEvent event) {
@@ -71,13 +75,74 @@ public class SagaOrchestrator {
     @Transactional
     public SagaState startSaga(String sagaType, Map<String, Object> payload) {
         SagaState state = new SagaState(sagaType, payload);
+        if (!stepHandlers.isEmpty()) {
+            String firstStep = stepHandlers.get(0).getStepName();
+            state.setCurrentStep(firstStep);
+        }
         sagaStateRepository.save(state);
+
+        if (!stepHandlers.isEmpty()) {
+            StepHandler firstHandler = stepHandlers.get(0);
+            firstHandler.processForward(new SagaEvent(state.getSagaId(), state.getCurrentStep(), "START", payload));
+        }
+
         return state;
     }
 
     public void handleEvent(SagaEvent sagaEvent) {
-        log.warn("Received unhandled saga event: sagaId={}, step={}, status={}",
-                sagaEvent.getSagaId(), sagaEvent.getStepName(), sagaEvent.getStatus());
+        SagaState state = sagaStateRepository.findById(sagaEvent.getSagaId()).orElse(null);
+        if (state == null) {
+            log.error("Saga state not found - sagaId={}", sagaEvent.getSagaId());
+            return;
+        }
+
+        if (!SagaState.STATUS_IN_PROGRESS.equals(state.getStatus())) {
+            log.warn("Ignoring saga event for non-active state - sagaId={}, status={}",
+                    sagaEvent.getSagaId(), state.getStatus());
+            return;
+        }
+
+        if ("SUCCESS".equals(sagaEvent.getStatus())) {
+            findNextHandler(sagaEvent.getStepName())
+                    .ifPresent(handler -> {
+                        handler.processForward(sagaEvent);
+                        state.setCurrentStep(handler.getStepName());
+                        sagaStateRepository.save(state);
+                    });
+        } else if ("FAILED".equals(sagaEvent.getStatus())) {
+            rollbackFailedStep(sagaEvent.getStepName(), sagaEvent);
+        } else {
+            log.warn("Unhandled saga event status - sagaId={}, status={}",
+                    sagaEvent.getSagaId(), sagaEvent.getStatus());
+        }
+    }
+
+    private Optional<StepHandler> findNextHandler(String currentStep) {
+        for (int i = 0; i < stepHandlers.size(); i++) {
+            if (stepHandlers.get(i).getStepName().equals(currentStep) && i + 1 < stepHandlers.size()) {
+                return Optional.of(stepHandlers.get(i + 1));
+            }
+        }
+        return Optional.empty();
+    }
+
+    private void rollbackFailedStep(String failedStep, SagaEvent sagaEvent) {
+        int failedIndex = -1;
+        for (int i = 0; i < stepHandlers.size(); i++) {
+            if (stepHandlers.get(i).getStepName().equals(failedStep)) {
+                failedIndex = i;
+                break;
+            }
+        }
+
+        if (failedIndex == -1) {
+            log.warn("No handler found for failed step - sagaId={}, step={}", sagaEvent.getSagaId(), failedStep);
+            return;
+        }
+
+        for (int i = failedIndex; i >= 0; i--) {
+            stepHandlers.get(i).processRollback(sagaEvent);
+        }
     }
 
     public void failAndRollback(SagaState state, String reason) {

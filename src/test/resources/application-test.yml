@@ -19,7 +19,7 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.H2Dialect
   flyway:
-    enabled: true
+    enabled: false
     locations: classpath:db/migration
   kafka:
     bootstrap-servers: ${spring.embedded.kafka.brokers}
