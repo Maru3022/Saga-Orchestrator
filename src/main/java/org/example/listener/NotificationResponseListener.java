@@ -27,7 +27,7 @@ public class NotificationResponseListener {
     )
     public void onNotificationResponse(
             @Payload String payload,
-            @Header(KafkaHeaders.RECEIVED_PARTITION_ID) int partition,
+            @Header(KafkaHeaders.RECEIVED_PARTITION) int partition,
             @Header(KafkaHeaders.OFFSET) long offset,
             Acknowledgment ack) {
         try {

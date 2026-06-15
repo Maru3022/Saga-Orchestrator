@@ -2,6 +2,7 @@ package org.example.config;
 
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.boot.autoconfigure.kafka.KafkaProperties;
@@ -49,8 +50,8 @@ public class SagaMessagingConfig {
         // Configure error handler with DeadLetterPublishingRecoverer
         DeadLetterPublishingRecoverer recoverer = new DeadLetterPublishingRecoverer(
                 sagaKafkaTemplate,
-                (record, ex) -> new org.apache.kafka.clients.producer.ProducerRecord<>(
-                        record.topic() + ".DLT", record.value()));
+                (org.apache.kafka.clients.consumer.ConsumerRecord<?, ?> record, Exception ex) -> new TopicPartition(
+                        record.topic() + ".DLT", record.partition()));
 
         ExponentialBackOff backOff = new ExponentialBackOff(1000L, 2.0);
         backOff.setMaxAttempts(3);

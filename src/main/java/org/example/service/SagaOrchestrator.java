@@ -5,11 +5,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.model.*;
 import org.example.repository.SagaInstanceRepository;
+import org.example.repository.SagaStateRepository;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.Map;
 import java.util.UUID;
 
 @Slf4j
@@ -17,7 +19,10 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class SagaOrchestrator {
 
+    public static final String SAGA_TYPE = "CREATE_PROGRAM";
+
     private final SagaInstanceRepository sagaInstanceRepository;
+    private final SagaStateRepository sagaStateRepository;
     private final KafkaTemplate<String, String> kafkaTemplate;
     private final ObjectMapper objectMapper;
 
@@ -26,7 +31,7 @@ public class SagaOrchestrator {
         String correlationId = event.getCorrelationId();
         
         log.info("Starting saga - correlationId={}, userId={}, email={}",
-                correlationId, event.getUserId(), event.getUserEmail());
+                correlationId, event.getUserId(), event.getEmail());
 
         // Idempotency check
         if (sagaInstanceRepository.existsByCorrelationId(correlationId)) {
@@ -39,7 +44,7 @@ public class SagaOrchestrator {
                 .id(UUID.randomUUID())
                 .correlationId(correlationId)
                 .userId(event.getUserId())
-                .userEmail(event.getUserEmail())
+                .userEmail(event.getEmail())
                 .state(SagaStatus.STARTED)
                 .currentStep(SagaStep.SEND_NOTIFICATION)
                 .retryCount(0)
@@ -61,6 +66,28 @@ public class SagaOrchestrator {
 
         // Send to notification service
         sendNotificationRequest(sagaInstance, event);
+    }
+
+    @Transactional
+    public SagaState startSaga(String sagaType, Map<String, Object> payload) {
+        SagaState state = new SagaState(sagaType, payload);
+        sagaStateRepository.save(state);
+        return state;
+    }
+
+    public void handleEvent(SagaEvent sagaEvent) {
+        log.warn("Received unhandled saga event: sagaId={}, step={}, status={}",
+                sagaEvent.getSagaId(), sagaEvent.getStepName(), sagaEvent.getStatus());
+    }
+
+    public void failAndRollback(SagaState state, String reason) {
+        if (state == null) {
+            return;
+        }
+        log.warn("Failing saga state {} due to timeout: {}", state.getSagaId(), reason);
+        state.setStatus(SagaState.STATUS_FAILED);
+        state.setFailureReason(reason);
+        sagaStateRepository.save(state);
     }
 
     private void sendNotificationRequest(SagaInstance sagaInstance, UserCreatedEvent event) {

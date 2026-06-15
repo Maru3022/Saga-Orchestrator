@@ -6,7 +6,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.model.UserCreatedEvent;
 import org.example.service.SagaOrchestrator;
 import org.springframework.kafka.annotation.KafkaListener;
-import org.springframework.kafka.rebalance.ConsumerAwareListenerErrorHandler;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.handler.annotation.Header;
@@ -28,7 +27,7 @@ public class UserCreatedListener {
     )
     public void onUserCreated(
             @Payload String payload,
-            @Header(KafkaHeaders.RECEIVED_PARTITION_ID) int partition,
+            @Header(KafkaHeaders.RECEIVED_PARTITION) int partition,
             @Header(KafkaHeaders.OFFSET) long offset,
             Acknowledgment ack) {
         try {
