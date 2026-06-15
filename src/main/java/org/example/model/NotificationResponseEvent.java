@@ -9,12 +9,9 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class UserCreatedEvent {
+public class NotificationResponseEvent {
     private String correlationId;
     private String userId;
-    private String username;
-    private String email;
-    private String fullName;
     private boolean success;
     private String errorMessage;
 }

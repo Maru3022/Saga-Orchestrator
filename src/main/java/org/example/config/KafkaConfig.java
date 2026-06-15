@@ -8,48 +8,91 @@ import org.springframework.kafka.config.TopicBuilder;
 @Configuration
 public class KafkaConfig {
 
+    // Saga orchestrator topics
     @Bean
-    public NewTopic userCreatedTopic() {
-        return TopicBuilder.name("user.created").partitions(3).replicas(1).build();
+    public NewTopic sagaUserCreatedTopic() {
+        return TopicBuilder.name("saga.user.created").partitions(3).replicas(1).build();
     }
 
     @Bean
-    public NewTopic userCommandTopic() {
-        return TopicBuilder.name("saga-user-command").partitions(3).replicas(1).build();
+    public NewTopic sagaNotificationSendTopic() {
+        return TopicBuilder.name("saga.notification.send").partitions(3).replicas(1).build();
     }
 
     @Bean
-    public NewTopic userResponseTopic() {
-        return TopicBuilder.name("saga-user-response").partitions(3).replicas(1).build();
+    public NewTopic sagaNotificationResponseTopic() {
+        return TopicBuilder.name("saga.notification.response").partitions(3).replicas(1).build();
     }
 
     @Bean
-    public NewTopic trainsCommandTopic() {
-        return TopicBuilder.name("saga-trains-command").partitions(3).replicas(1).build();
+    public NewTopic sagaCabinetCreateTopic() {
+        return TopicBuilder.name("saga.cabinet.create").partitions(3).replicas(1).build();
     }
 
     @Bean
-    public NewTopic nutritionCommandTopic() {
-        return TopicBuilder.name("saga-nutrition-command").partitions(3).replicas(1).build();
+    public NewTopic sagaCabinetResponseTopic() {
+        return TopicBuilder.name("saga.cabinet.response").partitions(3).replicas(1).build();
     }
 
     @Bean
-    public NewTopic notificationCommandTopic() {
-        return TopicBuilder.name("saga-notification-command").partitions(3).replicas(1).build();
+    public NewTopic sagaNutritionCalculateTopic() {
+        return TopicBuilder.name("saga.nutrition.calculate").partitions(3).replicas(1).build();
     }
 
     @Bean
-    public NewTopic trainsResponseTopic() {
-        return TopicBuilder.name("saga-trains-response").partitions(3).replicas(1).build();
+    public NewTopic sagaNutritionResponseTopic() {
+        return TopicBuilder.name("saga.nutrition.response").partitions(3).replicas(1).build();
+    }
+
+    // Compensation topics
+    @Bean
+    public NewTopic sagaNotificationCompensateTopic() {
+        return TopicBuilder.name("saga.notification.compensate").partitions(3).replicas(1).build();
     }
 
     @Bean
-    public NewTopic nutritionResponseTopic() {
-        return TopicBuilder.name("saga-nutrition-response").partitions(3).replicas(1).build();
+    public NewTopic sagaCabinetCompensateTopic() {
+        return TopicBuilder.name("saga.cabinet.compensate").partitions(3).replicas(1).build();
     }
 
     @Bean
-    public NewTopic notificationResponseTopic() {
-        return TopicBuilder.name("saga-notification-response").partitions(3).replicas(1).build();
+    public NewTopic sagaUserCompensateTopic() {
+        return TopicBuilder.name("saga.user.compensate").partitions(3).replicas(1).build();
+    }
+
+    // Dead Letter Topics
+    @Bean
+    public NewTopic sagaNotificationSendDltTopic() {
+        return TopicBuilder.name("saga.notification.send.DLT").partitions(3).replicas(1).build();
+    }
+
+    @Bean
+    public NewTopic sagaCabinetCreateDltTopic() {
+        return TopicBuilder.name("saga.cabinet.create.DLT").partitions(3).replicas(1).build();
+    }
+
+    @Bean
+    public NewTopic sagaNutritionCalculateDltTopic() {
+        return TopicBuilder.name("saga.nutrition.calculate.DLT").partitions(3).replicas(1).build();
+    }
+
+    @Bean
+    public NewTopic sagaUserCreatedDltTopic() {
+        return TopicBuilder.name("saga.user.created.DLT").partitions(3).replicas(1).build();
+    }
+
+    @Bean
+    public NewTopic sagaNotificationResponseDltTopic() {
+        return TopicBuilder.name("saga.notification.response.DLT").partitions(3).replicas(1).build();
+    }
+
+    @Bean
+    public NewTopic sagaCabinetResponseDltTopic() {
+        return TopicBuilder.name("saga.cabinet.response.DLT").partitions(3).replicas(1).build();
+    }
+
+    @Bean
+    public NewTopic sagaNutritionResponseDltTopic() {
+        return TopicBuilder.name("saga.nutrition.response.DLT").partitions(3).replicas(1).build();
     }
 }

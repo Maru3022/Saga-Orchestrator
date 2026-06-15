@@ -9,9 +9,13 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.*;
+import org.springframework.kafka.listener.ConcurrentMessageListenerContainer;
+import org.springframework.kafka.listener.DeadLetterPublishingRecoverer;
 import org.springframework.kafka.listener.DefaultErrorHandler;
+import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.kafka.support.converter.JsonMessageConverter;
-import org.springframework.util.backoff.FixedBackOff;
+import org.springframework.messaging.handler.annotation.support.DefaultMessageHandlerMethodFactory;
+import org.springframework.util.backoff.ExponentialBackOff;
 
 import java.util.Map;
 
@@ -26,17 +30,34 @@ public class SagaMessagingConfig {
         props.put(ConsumerConfig.GROUP_ID_CONFIG, "saga-orchestrator-group");
         props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
+        props.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, 100);
+        props.put(ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, 30000);
         return new DefaultKafkaConsumerFactory<>(props);
     }
 
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String, String> sagaKafkaListenerContainerFactory(
-            ConsumerFactory<String, String> sagaConsumerFactory) {
+            ConsumerFactory<String, String> sagaConsumerFactory,
+            KafkaTemplate<String, String> sagaKafkaTemplate) {
         ConcurrentKafkaListenerContainerFactory<String, String> factory =
                 new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(sagaConsumerFactory);
         factory.setRecordMessageConverter(new JsonMessageConverter());
-        factory.setCommonErrorHandler(new DefaultErrorHandler(new FixedBackOff(2000L, 3)));
+        factory.setConcurrency(3);
+        factory.getContainerProperties().setAckMode(org.springframework.kafka.listener.ContainerProperties.AckMode.MANUAL_IMMEDIATE);
+
+        // Configure error handler with DeadLetterPublishingRecoverer
+        DeadLetterPublishingRecoverer recoverer = new DeadLetterPublishingRecoverer(
+                sagaKafkaTemplate,
+                (record, ex) -> new org.apache.kafka.clients.producer.ProducerRecord<>(
+                        record.topic() + ".DLT", record.value()));
+
+        ExponentialBackOff backOff = new ExponentialBackOff(1000L, 2.0);
+        backOff.setMaxAttempts(3);
+
+        DefaultErrorHandler errorHandler = new DefaultErrorHandler(recoverer, backOff);
+        factory.setCommonErrorHandler(errorHandler);
+
         return factory;
     }
 
@@ -48,6 +69,8 @@ public class SagaMessagingConfig {
         props.put(ProducerConfig.ACKS_CONFIG, "all");
         props.put(ProducerConfig.RETRIES_CONFIG, 3);
         props.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
+        props.put(ProducerConfig.MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION, 1);
+        props.put(ProducerConfig.COMPRESSION_TYPE_CONFIG, "snappy");
         return new DefaultKafkaProducerFactory<>(props);
     }
 

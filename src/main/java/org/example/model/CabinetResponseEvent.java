@@ -9,12 +9,10 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class UserCreatedEvent {
+public class CabinetResponseEvent {
     private String correlationId;
     private String userId;
-    private String username;
-    private String email;
-    private String fullName;
+    private String cabinetId;
     private boolean success;
     private String errorMessage;
 }
