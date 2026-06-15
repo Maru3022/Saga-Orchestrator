@@ -1,35 +1,51 @@
 package org.example.service.handlers;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.example.model.SagaCommandEvent;
 import org.example.model.SagaEvent;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
+import java.util.Map;
+import java.util.UUID;
+
 @Component
 @Slf4j
+@RequiredArgsConstructor
 public class NutritionStepHandler implements StepHandler {
 
     public static final String STEP = "NUTRITION";
 
-    @Autowired
-    private KafkaTemplate<String, SagaEvent> kafkaTemplate;
+    private final KafkaTemplate<String, String> sagaKafkaTemplate;
+    private final ObjectMapper objectMapper;
 
     @Override
-    public void processForward(SagaEvent event){
+    public void processForward(SagaEvent event) {
         log.info("Forward NUTRITION step for saga {}", event.getSagaId());
-        kafkaTemplate.send("saga-nutrition-command", event);
+        sendCommand(event.getSagaId(), "EXECUTE", event.getData());
     }
 
     @Override
-    public void processRollback(SagaEvent event){
+    public void processRollback(SagaEvent event) {
         log.info("Rollback NUTRITION step for saga {}", event.getSagaId());
-        SagaEvent rollbackEvent = new SagaEvent(event.getSagaId(), STEP, "ROLLBACK", event.getData());
-        kafkaTemplate.send("saga-nutrition-command", rollbackEvent);
+        sendCommand(event.getSagaId(), "ROLLBACK", event.getData());
+    }
+
+    private void sendCommand(String sagaId, String status, Map<String, Object> data) {
+        try {
+            SagaCommandEvent cmd = new SagaCommandEvent(
+                    UUID.randomUUID().toString(), sagaId, STEP, status, data);
+            String json = objectMapper.writeValueAsString(cmd);
+            sagaKafkaTemplate.send("saga-nutrition-command", sagaId, json);
+        } catch (JsonProcessingException e) {
+            log.error("Failed to serialize NUTRITION command for saga {}", sagaId, e);
+            throw new IllegalStateException("Serialization failed", e);
+        }
     }
 
     @Override
-    public String getStepName(){
-        return STEP;
-    }
+    public String getStepName() { return STEP; }
 }
