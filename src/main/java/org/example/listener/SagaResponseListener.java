@@ -3,6 +3,7 @@ package org.example.listener;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.example.config.SagaTopicsProperties;
 import org.example.model.SagaEvent;
 import org.example.model.SagaResponseEvent;
 import org.example.service.SagaOrchestrator;
@@ -19,13 +20,14 @@ public class SagaResponseListener {
 
     private final SagaOrchestrator sagaOrchestrator;
     private final ObjectMapper objectMapper;
+    private final SagaTopicsProperties topics;
 
     @KafkaListener(
             topics = {
-                    "saga-notification-response",
-                    "saga-trains-response",
-                    "saga-nutrition-response",
-                    "saga-user-response"
+                    "#{@sagaTopicsProperties.notificationResponseHyphen}",
+                    "#{@sagaTopicsProperties.trainsResponse}",
+                    "#{@sagaTopicsProperties.nutritionResponseHyphen}",
+                    "#{@sagaTopicsProperties.userResponse}"
             },
             containerFactory = "sagaKafkaListenerContainerFactory",
             groupId = "saga-orchestrator-group"

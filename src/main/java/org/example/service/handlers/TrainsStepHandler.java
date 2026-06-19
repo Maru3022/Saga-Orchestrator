@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.example.config.SagaTopicsProperties;
 import org.example.model.SagaCommandEvent;
 import org.example.model.SagaEvent;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -21,6 +22,7 @@ public class TrainsStepHandler implements StepHandler {
 
     private final KafkaTemplate<String, String> sagaKafkaTemplate;
     private final ObjectMapper objectMapper;
+    private final SagaTopicsProperties topics;
 
     @Override
     public void processForward(SagaEvent event) {
@@ -39,7 +41,7 @@ public class TrainsStepHandler implements StepHandler {
             SagaCommandEvent cmd = new SagaCommandEvent(
                     UUID.randomUUID().toString(), sagaId, STEP, status, data);
             String json = objectMapper.writeValueAsString(cmd);
-            sagaKafkaTemplate.send("saga-trains-command", sagaId, json);
+            sagaKafkaTemplate.send(topics.getTrainsCommand(), sagaId, json);
         } catch (JsonProcessingException e) {
             log.error("Failed to serialize TRAINS command for saga {}", sagaId, e);
             throw new IllegalStateException("Serialization failed", e);

@@ -3,6 +3,7 @@ package org.example.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.example.config.SagaTopicsProperties;
 import org.example.model.*;
 import org.example.repository.SagaInstanceRepository;
 import org.example.repository.SagaStateRepository;
@@ -29,6 +30,7 @@ public class SagaOrchestrator {
     private final KafkaTemplate<String, String> kafkaTemplate;
     private final ObjectMapper objectMapper;
     private final List<StepHandler> stepHandlers;
+    private final SagaTopicsProperties topics;
 
     @Transactional
     public void startSaga(UserCreatedEvent event) {
@@ -158,7 +160,7 @@ public class SagaOrchestrator {
     private void sendNotificationRequest(SagaInstance sagaInstance, UserCreatedEvent event) {
         try {
             String correlationId = sagaInstance.getCorrelationId();
-            String topic = "saga.notification.send";
+            String topic = topics.getNotificationSend();
             
             String message = objectMapper.writeValueAsString(event);
             
@@ -212,7 +214,7 @@ public class SagaOrchestrator {
     private void sendCabinetRequest(SagaInstance sagaInstance) {
         try {
             String correlationId = sagaInstance.getCorrelationId();
-            String topic = "saga.cabinet.create";
+            String topic = topics.getCabinetCreate();
             
             UserCreatedEvent event = objectMapper.readValue(sagaInstance.getSagaPayload(), 
                     UserCreatedEvent.class);
@@ -265,7 +267,7 @@ public class SagaOrchestrator {
     private void sendNutritionRequest(SagaInstance sagaInstance) {
         try {
             String correlationId = sagaInstance.getCorrelationId();
-            String topic = "saga.nutrition.calculate";
+            String topic = topics.getNutritionCalculate();
             
             UserCreatedEvent event = objectMapper.readValue(sagaInstance.getSagaPayload(),
                     UserCreatedEvent.class);
@@ -416,7 +418,7 @@ public class SagaOrchestrator {
                     .build();
 
             String message = objectMapper.writeValueAsString(event);
-            kafkaTemplate.send("saga.cabinet.compensate", correlationId, message);
+            kafkaTemplate.send(topics.getCabinetCompensate(), correlationId, message);
             
             log.info("Sent cabinet compensation - correlationId={}, action=DELETE_CABINET",
                     correlationId);
@@ -438,7 +440,7 @@ public class SagaOrchestrator {
                     .build();
 
             String message = objectMapper.writeValueAsString(event);
-            kafkaTemplate.send("saga.notification.compensate", correlationId, message);
+            kafkaTemplate.send(topics.getNotificationCompensate(), correlationId, message);
             
             log.info("Sent notification compensation - correlationId={}, action=CANCEL_NOTIFICATION",
                     correlationId);
@@ -460,7 +462,7 @@ public class SagaOrchestrator {
                     .build();
 
             String message = objectMapper.writeValueAsString(event);
-            kafkaTemplate.send("saga.user.compensate", correlationId, message);
+            kafkaTemplate.send(topics.getUserCompensate(), correlationId, message);
             
             log.info("Sent user compensation - correlationId={}, action=DELETE_USER",
                     correlationId);

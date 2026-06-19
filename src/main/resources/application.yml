@@ -14,7 +14,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:update}
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
@@ -67,6 +67,32 @@ server:
 saga:
   timeout-ms: 120000
   max-retries: 3
+  topics:
+    user-created: ${SAGA_TOPIC_USER_CREATED:saga.user.created}
+    notification-send: ${SAGA_TOPIC_NOTIFICATION_SEND:saga.notification.send}
+    notification-response: ${SAGA_TOPIC_NOTIFICATION_RESPONSE:saga.notification.response}
+    cabinet-create: ${SAGA_TOPIC_CABINET_CREATE:saga.cabinet.create}
+    cabinet-response: ${SAGA_TOPIC_CABINET_RESPONSE:saga.cabinet.response}
+    nutrition-calculate: ${SAGA_TOPIC_NUTRITION_CALCULATE:saga.nutrition.calculate}
+    nutrition-response: ${SAGA_TOPIC_NUTRITION_RESPONSE:saga.nutrition.response}
+    notification-command: ${SAGA_TOPIC_NOTIFICATION_COMMAND:saga-notification-command}
+    nutrition-command: ${SAGA_TOPIC_NUTRITION_COMMAND:saga-nutrition-command}
+    notification-response-hyphen: ${SAGA_TOPIC_NOTIFICATION_RESPONSE_HYPHEN:saga-notification-response}
+    nutrition-response-hyphen: ${SAGA_TOPIC_NUTRITION_RESPONSE_HYPHEN:saga-nutrition-response}
+    trains-response: ${SAGA_TOPIC_TRAINS_RESPONSE:saga-trains-response}
+    user-response: ${SAGA_TOPIC_USER_RESPONSE:saga-user-response}
+    trains-command: ${SAGA_TOPIC_TRAINS_COMMAND:saga-trains-command}
+    user-command: ${SAGA_TOPIC_USER_COMMAND:saga-user-command}
+    notification-compensate: ${SAGA_TOPIC_NOTIFICATION_COMPENSATE:saga.notification.compensate}
+    cabinet-compensate: ${SAGA_TOPIC_CABINET_COMPENSATE:saga.cabinet.compensate}
+    user-compensate: ${SAGA_TOPIC_USER_COMPENSATE:saga.user.compensate}
+    notification-send-dlt: ${SAGA_TOPIC_NOTIFICATION_SEND_DLT:saga.notification.send.DLT}
+    cabinet-create-dlt: ${SAGA_TOPIC_CABINET_CREATE_DLT:saga.cabinet.create.DLT}
+    nutrition-calculate-dlt: ${SAGA_TOPIC_NUTRITION_CALCULATE_DLT:saga.nutrition.calculate.DLT}
+    user-created-dlt: ${SAGA_TOPIC_USER_CREATED_DLT:saga.user.created.DLT}
+    notification-response-dlt: ${SAGA_TOPIC_NOTIFICATION_RESPONSE_DLT:saga.notification.response.DLT}
+    cabinet-response-dlt: ${SAGA_TOPIC_CABINET_RESPONSE_DLT:saga.cabinet.response.DLT}
+    nutrition-response-dlt: ${SAGA_TOPIC_NUTRITION_RESPONSE_DLT:saga.nutrition.response.DLT}
 
 management:
   endpoints:

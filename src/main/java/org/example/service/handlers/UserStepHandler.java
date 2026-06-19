@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.example.config.SagaTopicsProperties;
 import org.example.model.SagaCommandEvent;
 import org.example.model.SagaEvent;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -20,6 +21,7 @@ public class UserStepHandler implements StepHandler {
 
     private final KafkaTemplate<String, String> sagaKafkaTemplate;
     private final ObjectMapper objectMapper;
+    private final SagaTopicsProperties topics;
 
     @Override
     public void processForward(SagaEvent event) {
@@ -33,7 +35,7 @@ public class UserStepHandler implements StepHandler {
             SagaCommandEvent cmd = new SagaCommandEvent(
                     UUID.randomUUID().toString(), event.getSagaId(), STEP, "ROLLBACK", event.getData());
             String json = objectMapper.writeValueAsString(cmd);
-            sagaKafkaTemplate.send("saga-user-command", event.getSagaId(), json);
+            sagaKafkaTemplate.send(topics.getUserCommand(), event.getSagaId(), json);
         } catch (JsonProcessingException e) {
             log.error("Failed to serialize USER rollback for saga {}", event.getSagaId(), e);
         }
