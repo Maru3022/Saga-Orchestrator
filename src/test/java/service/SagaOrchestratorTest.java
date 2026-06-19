@@ -1,5 +1,6 @@
 package service;
 
+import org.example.config.SagaTopicsProperties;
 import org.example.model.SagaEvent;
 import org.example.model.SagaState;
 import org.example.repository.SagaStateRepository;
@@ -27,6 +28,7 @@ class SagaOrchestratorTest {
         repository = mock(SagaStateRepository.class);
         stepHandler1 = mock(StepHandler.class);
         stepHandler2 = mock(StepHandler.class);
+        var sagaTopicsProperties = mock(SagaTopicsProperties.class);
 
         when(stepHandler1.getStepName()).thenReturn("TRAINS");
         when(stepHandler2.getStepName()).thenReturn("NUTRITION");
@@ -36,7 +38,7 @@ class SagaOrchestratorTest {
         var objectMapper = mock(com.fasterxml.jackson.databind.ObjectMapper.class);
 
         orchestrator = new SagaOrchestrator(sagaInstanceRepository, repository, kafkaTemplate, objectMapper,
-            List.of(stepHandler1, stepHandler2));
+            List.of(stepHandler1, stepHandler2), sagaTopicsProperties);
     }
 
     @Test

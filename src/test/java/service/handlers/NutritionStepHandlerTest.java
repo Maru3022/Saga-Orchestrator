@@ -1,6 +1,7 @@
 package service.handlers;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.example.config.SagaTopicsProperties;
 import org.example.model.SagaEvent;
 import org.example.service.handlers.NutritionStepHandler;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,6 +29,9 @@ class NutritionStepHandlerTest {
     @Mock
     private ObjectMapper objectMapper;
 
+    @Mock
+    private SagaTopicsProperties sagaTopicsProperties;
+
     @InjectMocks
     private NutritionStepHandler handler;
 
@@ -35,6 +39,7 @@ class NutritionStepHandlerTest {
     void setUp() throws Exception {
         MockitoAnnotations.openMocks(this);
         when(objectMapper.writeValueAsString(any())).thenReturn("{}");
+        when(sagaTopicsProperties.getNutritionCommand()).thenReturn("saga-nutrition-command");
     }
 
     @Test

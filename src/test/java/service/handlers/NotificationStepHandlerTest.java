@@ -1,6 +1,7 @@
 package service.handlers;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.example.config.SagaTopicsProperties;
 import org.example.model.SagaEvent;
 import org.example.service.handlers.NotificationStepHandler;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,13 +29,17 @@ class NotificationStepHandlerTest {
     @Mock
     private ObjectMapper objectMapper;
 
+    @Mock
+    private SagaTopicsProperties sagaTopicsProperties;
+
     @InjectMocks
     private NotificationStepHandler handler;
 
     @BeforeEach
     void setUp() throws Exception {
         MockitoAnnotations.openMocks(this);
-            when(objectMapper.writeValueAsString(any())).thenReturn("{}");
+        when(objectMapper.writeValueAsString(any())).thenReturn("{}");
+        when(sagaTopicsProperties.getNotificationCommand()).thenReturn("saga-notification-command");
     }
 
     @Test
