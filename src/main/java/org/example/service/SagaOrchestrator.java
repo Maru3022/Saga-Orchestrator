@@ -193,6 +193,12 @@ public class SagaOrchestrator {
             return;
         }
 
+        if (sagaInstance.getCurrentStep() != SagaStep.SEND_NOTIFICATION) {
+            log.warn("Duplicate or out-of-order notification response ignored - correlationId={}, currentStep={}, expectedStep={}",
+                    correlationId, sagaInstance.getCurrentStep(), SagaStep.SEND_NOTIFICATION);
+            return;
+        }
+
         if (event.isSuccess()) {
             sagaInstance.setState(SagaStatus.NOTIFICATION_SENT);
             sagaInstance.setCurrentStep(SagaStep.CREATE_CABINET);
@@ -246,6 +252,12 @@ public class SagaOrchestrator {
             return;
         }
 
+        if (sagaInstance.getCurrentStep() != SagaStep.CREATE_CABINET) {
+            log.warn("Duplicate or out-of-order cabinet response ignored - correlationId={}, currentStep={}, expectedStep={}",
+                    correlationId, sagaInstance.getCurrentStep(), SagaStep.CREATE_CABINET);
+            return;
+        }
+
         if (event.isSuccess()) {
             sagaInstance.setState(SagaStatus.CABINET_CREATED);
             sagaInstance.setCurrentStep(SagaStep.CALCULATE_NUTRITION);
@@ -296,6 +308,12 @@ public class SagaOrchestrator {
 
         if (sagaInstance == null) {
             log.error("Saga instance not found - correlationId={}", correlationId);
+            return;
+        }
+
+        if (sagaInstance.getCurrentStep() != SagaStep.CALCULATE_NUTRITION) {
+            log.warn("Duplicate or out-of-order nutrition response ignored - correlationId={}, currentStep={}, expectedStep={}",
+                    correlationId, sagaInstance.getCurrentStep(), SagaStep.CALCULATE_NUTRITION);
             return;
         }
 
