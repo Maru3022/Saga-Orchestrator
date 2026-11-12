@@ -42,6 +42,28 @@ class SagaOrchestratorTest {
     }
 
     @Test
+    void lastSuccessfulStepCompletesSaga() {
+        SagaState state = new SagaState("saga-type", Map.of());
+        state.setCurrentStep("NUTRITION");
+        when(repository.findById(state.getSagaId())).thenReturn(Optional.of(state));
+        orchestrator.handleEvent(new SagaEvent(state.getSagaId(), "NUTRITION", "SUCCESS", Map.of()));
+        org.junit.jupiter.api.Assertions.assertEquals(SagaState.STATUS_COMPLETED, state.getStatus());
+        verify(repository).save(state);
+        verify(stepHandler1, never()).processForward(any());
+        verify(stepHandler2, never()).processForward(any());
+    }
+
+    @Test
+    void staleSuccessDoesNotRepeatNextStep() {
+        SagaState state = new SagaState("saga-type", Map.of());
+        state.setCurrentStep("NUTRITION");
+        when(repository.findById(state.getSagaId())).thenReturn(Optional.of(state));
+        orchestrator.handleEvent(new SagaEvent(state.getSagaId(), "TRAINS", "SUCCESS", Map.of()));
+        verify(stepHandler2, never()).processForward(any());
+        verify(repository, never()).save(any());
+    }
+
+    @Test
     void testStartSaga() {
         orchestrator.startSaga("saga-type", Map.of("key", "value"));
         verify(repository, atLeastOnce()).save(any(SagaState.class));

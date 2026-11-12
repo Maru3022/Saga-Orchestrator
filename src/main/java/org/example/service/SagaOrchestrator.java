@@ -36,8 +36,8 @@ public class SagaOrchestrator {
     public void startSaga(UserCreatedEvent event) {
         String correlationId = event.getCorrelationId();
         
-        log.info("Starting saga - correlationId={}, userId={}, email={}",
-                correlationId, event.getUserId(), event.getEmail());
+        log.info("Starting saga - correlationId={}, userId={}",
+                correlationId, event.getUserId());
 
         // Idempotency check
         if (sagaInstanceRepository.existsByCorrelationId(correlationId)) {
@@ -105,10 +105,16 @@ public class SagaOrchestrator {
         }
 
         if ("SUCCESS".equals(sagaEvent.getStatus())) {
+            if (!java.util.Objects.equals(state.getCurrentStep(), sagaEvent.getStepName())) {
+                return;
+            }
             findNextHandler(sagaEvent.getStepName())
-                    .ifPresent(handler -> {
+                    .ifPresentOrElse(handler -> {
                         handler.processForward(sagaEvent);
                         state.setCurrentStep(handler.getStepName());
+                        sagaStateRepository.save(state);
+                    }, () -> {
+                        state.setStatus(SagaState.STATUS_COMPLETED);
                         sagaStateRepository.save(state);
                     });
         } else if ("FAILED".equals(sagaEvent.getStatus())) {

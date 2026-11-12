@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/saga")
+@RequestMapping("/api/v1/sagas")
 public class SagaController {
 
     @Autowired
