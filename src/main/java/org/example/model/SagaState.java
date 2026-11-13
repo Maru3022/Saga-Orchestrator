@@ -17,6 +17,7 @@ public class SagaState implements Serializable {
     private String currentStep;
     private String status;
     private String failureReason;
+    private String ownerId;
     private Map<String, Object> payload;
     private long createdAt;
     private long updatedAt;
@@ -50,6 +51,9 @@ public class SagaState implements Serializable {
 
     public String getFailureReason() { return failureReason; }
     public void setFailureReason(String failureReason) { this.failureReason = failureReason; }
+
+    public String getOwnerId() { return ownerId; }
+    public void setOwnerId(String ownerId) { this.ownerId = ownerId; }
 
     public Map<String, Object> getPayload() { return payload; }
     public void setPayload(Map<String, Object> payload) { this.payload = payload; }

@@ -21,15 +21,19 @@ public class SagaController {
     private SagaStateRepository sagaStateRepository;
 
     @PostMapping("/create-program")
-    public ResponseEntity<SagaState> createProgram(@RequestBody Map<String, Object> payload) {
-        SagaState state = orchestrator.startSaga(SagaOrchestrator.SAGA_TYPE, payload);
+    public ResponseEntity<SagaState> createProgram(@RequestHeader("X-User-Id") String userId,
+                                                   @RequestBody Map<String, Object> payload) {
+        SagaState state = orchestrator.startSaga(SagaOrchestrator.SAGA_TYPE, payload, userId);
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(state);
     }
 
     @GetMapping("/{sagaId}")
-    public ResponseEntity<SagaState> getSaga(@PathVariable String sagaId) {
+    public ResponseEntity<SagaState> getSaga(@RequestHeader("X-User-Id") String userId,
+                                             @PathVariable String sagaId) {
         return sagaStateRepository.findById(sagaId)
-                .map(ResponseEntity::ok)
+                .map(state -> userId.equals(state.getOwnerId())
+                        ? ResponseEntity.ok(state)
+                        : ResponseEntity.status(HttpStatus.FORBIDDEN).<SagaState>build())
                 .orElse(ResponseEntity.notFound().build());
     }
 }

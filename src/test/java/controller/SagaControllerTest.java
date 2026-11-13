@@ -22,6 +22,7 @@ import java.util.UUID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(controllers = SagaController.class)
@@ -47,14 +48,27 @@ class SagaControllerTest {
         mockState.setSagaId(UUID.randomUUID().toString());
         mockState.setCurrentStep("STARTED");
 
-        Mockito.when(orchestrator.startSaga(eq(SagaOrchestrator.SAGA_TYPE), any())).thenReturn(mockState);
+        Mockito.when(orchestrator.startSaga(eq(SagaOrchestrator.SAGA_TYPE), any(), eq("user-123"))).thenReturn(mockState);
 
         mockMvc.perform(post("/api/v1/sagas/create-program")
+                        .header("X-User-Id", "user-123")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"userId\":\"123\"}"))
                 .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.sagaId").isNotEmpty())
                 .andExpect(jsonPath("$.sagaType").value(SagaOrchestrator.SAGA_TYPE))
                 .andExpect(jsonPath("$.currentStep").value("STARTED"));
+    }
+
+    @Test
+    void shouldForbidReadingAnotherUsersSaga() throws Exception {
+        SagaState state = new SagaState(SagaOrchestrator.SAGA_TYPE, Map.of("private", "value"));
+        state.setSagaId("saga-1");
+        state.setOwnerId("victim");
+        Mockito.when(sagaStateRepository.findById("saga-1")).thenReturn(java.util.Optional.of(state));
+
+        mockMvc.perform(get("/api/v1/sagas/saga-1")
+                        .header("X-User-Id", "attacker"))
+                .andExpect(status().isForbidden());
     }
 }
