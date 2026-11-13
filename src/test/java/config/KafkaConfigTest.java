@@ -24,6 +24,9 @@ public class KafkaConfigTest {
     @Autowired
     private Map<String, NewTopic> topics;
 
+    @Autowired
+    private SagaTopicsProperties sagaTopicsProperties;
+
     private Set<String> topicNames() {
         return topics.values().stream()
                 .map(NewTopic::name)
@@ -60,7 +63,7 @@ public class KafkaConfigTest {
 
     @Test
     void shouldCreateUserCreatedTopic() {
-        assertThat(topicNames()).contains("saga.user.created");
+        assertThat(topicNames()).contains(sagaTopicsProperties.getUserCreated());
     }
 
     @Test
