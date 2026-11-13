@@ -76,7 +76,13 @@ public class SagaOrchestrator {
 
     @Transactional
     public SagaState startSaga(String sagaType, Map<String, Object> payload) {
+        return startSaga(sagaType, payload, null);
+    }
+
+    @Transactional
+    public SagaState startSaga(String sagaType, Map<String, Object> payload, String ownerId) {
         SagaState state = new SagaState(sagaType, payload);
+        state.setOwnerId(ownerId);
         if (!stepHandlers.isEmpty()) {
             String firstStep = stepHandlers.get(0).getStepName();
             state.setCurrentStep(firstStep);
