@@ -68,7 +68,7 @@ saga:
   timeout-ms: 120000
   max-retries: 3
   topics:
-    user-created: ${SAGA_TOPIC_USER_CREATED:saga.user.created}
+    user-created: ${SAGA_TOPIC_USER_CREATED:user.created}
     notification-send: ${SAGA_TOPIC_NOTIFICATION_SEND:saga.notification.send}
     notification-response: ${SAGA_TOPIC_NOTIFICATION_RESPONSE:saga.notification.response}
     cabinet-create: ${SAGA_TOPIC_CABINET_CREATE:saga.cabinet.create}

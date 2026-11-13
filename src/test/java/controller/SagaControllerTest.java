@@ -49,7 +49,7 @@ class SagaControllerTest {
 
         Mockito.when(orchestrator.startSaga(eq(SagaOrchestrator.SAGA_TYPE), any())).thenReturn(mockState);
 
-        mockMvc.perform(post("/saga/create-program")
+        mockMvc.perform(post("/api/v1/sagas/create-program")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"userId\":\"123\"}"))
                 .andExpect(status().isAccepted())
