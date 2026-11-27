@@ -47,6 +47,7 @@ public class CabinetResponseListener {
 
         } catch (Exception e) {
             log.error("Failed to process cabinet response event: {}", payload, e);
+            throw new RuntimeException("Retry cabinet response event", e);
         }
     }
 }

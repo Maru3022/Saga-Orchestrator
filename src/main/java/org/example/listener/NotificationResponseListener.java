@@ -47,6 +47,7 @@ public class NotificationResponseListener {
 
         } catch (Exception e) {
             log.error("Failed to process notification response event: {}", payload, e);
+            throw new RuntimeException("Retry notification response event", e);
         }
     }
 }

@@ -63,6 +63,10 @@ public class SagaInstance {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
+    @Version
+    @Column(name = "version")
+    private long version;
+
     @Column(name = "completed_at")
     private Instant completedAt;
 

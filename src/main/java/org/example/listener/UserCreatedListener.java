@@ -47,6 +47,7 @@ public class UserCreatedListener {
 
         } catch (Exception e) {
             log.error("Failed to process user.created event: {}", payload, e);
+            throw new RuntimeException("Retry user.created event", e);
         }
     }
 }
