@@ -47,6 +47,7 @@ public class NutritionResponseListener {
 
         } catch (Exception e) {
             log.error("Failed to process nutrition response event: {}", payload, e);
+            throw new RuntimeException("Retry nutrition response event", e);
         }
     }
 }

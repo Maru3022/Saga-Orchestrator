@@ -53,6 +53,7 @@ public class SagaResponseListener {
 
         } catch (Exception e) {
             log.error("Failed to process saga response: {}", rawMessage, e);
+            throw new RuntimeException("Retry saga response event", e);
         }
     }
 

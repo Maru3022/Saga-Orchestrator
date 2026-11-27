@@ -101,4 +101,19 @@ class SagaOrchestratorTest {
         verify(stepHandler2, times(1)).processRollback(any(SagaEvent.class));
         verify(stepHandler1, times(1)).processRollback(any(SagaEvent.class));
     }
+
+    @Test
+    void timeoutCompensatesCompletedStepAndMarksSagaFailed() {
+        SagaState state = new SagaState("saga-type", Map.of("key", "value"));
+        state.setSagaId("timeout-1");
+        state.setCurrentStep("NUTRITION");
+        state.setStatus(SagaState.STATUS_IN_PROGRESS);
+
+        orchestrator.failAndRollback(state, "Timeout waiting for step");
+
+        verify(stepHandler2, times(1)).processRollback(any(SagaEvent.class));
+        verify(stepHandler1, times(1)).processRollback(any(SagaEvent.class));
+        org.junit.jupiter.api.Assertions.assertEquals(SagaState.STATUS_FAILED, state.getStatus());
+        verify(repository, atLeast(2)).save(state);
+    }
 }

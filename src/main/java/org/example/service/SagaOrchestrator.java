@@ -164,6 +164,12 @@ public class SagaOrchestrator {
             return;
         }
         log.warn("Failing saga state {} due to timeout: {}", state.getSagaId(), reason);
+        rollbackFailedStep(
+                state.getCurrentStep(),
+                new SagaEvent(state.getSagaId(), state.getCurrentStep(), "FAILED", state.getPayload())
+        );
+        state.setStatus(SagaState.STATUS_COMPENSATING);
+        sagaStateRepository.save(state);
         state.setStatus(SagaState.STATUS_FAILED);
         state.setFailureReason(reason);
         sagaStateRepository.save(state);
