@@ -2,9 +2,9 @@ name: CI/CD Saga Orchestrator
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, fix/stage-1, 'tech/**' ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, fix/stage-1, 'tech/**' ]
   workflow_dispatch:
 
 concurrency:
