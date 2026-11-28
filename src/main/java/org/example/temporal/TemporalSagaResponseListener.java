@@ -1,20 +1,23 @@
 package org.example.temporal;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.temporal.client.WorkflowClient;
 import org.example.model.SagaResponseEvent;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
 @Component
+@ConditionalOnProperty(name = "temporal.enabled", havingValue = "true")
 public class TemporalSagaResponseListener {
 
     private final ObjectMapper objectMapper;
-    private final TemporalStepOutcomeRegistry outcomeRegistry;
+    private final WorkflowClient workflowClient;
 
     public TemporalSagaResponseListener(ObjectMapper objectMapper,
-                                        TemporalStepOutcomeRegistry outcomeRegistry) {
+                                        WorkflowClient workflowClient) {
         this.objectMapper = objectMapper;
-        this.outcomeRegistry = outcomeRegistry;
+        this.workflowClient = workflowClient;
     }
 
     @KafkaListener(
@@ -29,16 +32,32 @@ public class TemporalSagaResponseListener {
     public void onResponse(String rawMessage) {
         try {
             SagaResponseEvent response = objectMapper.readValue(rawMessage, SagaResponseEvent.class);
-            if (response.getSagaId() == null || response.getStep() == null) {
+            if (response.getSagaId() == null || !response.getSagaId().startsWith("temporal-")
+                    || response.getStep() == null || response.getEventId() == null
+                    || response.getEventId().isBlank() || response.getStatus() == null) {
                 return;
             }
-            boolean success = "SUCCESS".equalsIgnoreCase(response.getStatus());
-            outcomeRegistry.complete(
+            String step = normalizeStep(response.getStep());
+            if (step == null) {
+                return;
+            }
+            String operation = "ROLLBACK_DONE".equalsIgnoreCase(response.getStatus())
+                    ? "COMPENSATE"
+                    : "EXECUTE";
+            StepOutcomeSignal outcome = new StepOutcomeSignal(
+                    response.getEventId(),
                     response.getSagaId(),
-                    normalizeStep(response.getStep()),
-                    new StepOutcome(success, response.getStatus()));
-        } catch (Exception ignored) {
-            throw new IllegalArgumentException("Invalid Temporal downstream response", ignored);
+                    step,
+                    operation,
+                    TemporalCommandIds.forStep(response.getSagaId(), step, operation),
+                    response.getStatus());
+            CreateProgramWorkflow workflow = workflowClient.newWorkflowStub(
+                    CreateProgramWorkflow.class,
+                    "fitflow-create-program-"
+                            + response.getSagaId().substring("temporal-".length()));
+            workflow.receiveOutcome(outcome);
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            throw new IllegalArgumentException("Invalid Temporal downstream response", e);
         }
     }
 
@@ -53,6 +72,6 @@ public class TemporalSagaResponseListener {
         if ("NUTRITION".equalsIgnoreCase(step)) {
             return "NUTRITION";
         }
-        return step.toUpperCase();
+        return null;
     }
 }

@@ -12,8 +12,10 @@ import org.mockito.MockitoAnnotations;
 import org.springframework.kafka.core.KafkaTemplate;
 
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -40,6 +42,8 @@ class TrainsStepHandlerTest {
         MockitoAnnotations.openMocks(this);
         when(objectMapper.writeValueAsString(any())).thenReturn("{}");
         when(sagaTopicsProperties.getTrainsCommand()).thenReturn("saga-trains-command");
+        when(kafkaTemplate.send(anyString(), anyString(), anyString()))
+                .thenReturn(CompletableFuture.completedFuture(null));
     }
 
     @Test
@@ -59,5 +63,16 @@ class TrainsStepHandlerTest {
         SagaEvent event = new SagaEvent("saga-1", "TRAINS", "START", Map.of("data", "value"));
         handler.processRollback(event);
         verify(kafkaTemplate, times(1)).send(eq("saga-trains-command"), eq("saga-1"), anyString());
+    }
+
+    @Test
+    void testBrokerSendFailureIsReportedToActivity() {
+        when(kafkaTemplate.send(anyString(), anyString(), anyString()))
+                .thenReturn(java.util.concurrent.CompletableFuture.failedFuture(
+                        new IllegalStateException("broker unavailable")));
+
+        assertThrows(IllegalStateException.class,
+                () -> handler.processForward(new SagaEvent(
+                        "saga-1", "TRAINS", "EXECUTE", Map.of("data", "value"))));
     }
 }

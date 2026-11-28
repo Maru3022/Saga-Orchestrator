@@ -7,22 +7,18 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
-import java.time.Duration;
 
 @Component
 public class CreateProgramActivitiesImpl implements CreateProgramActivities {
 
     private final List<StepHandler> stepHandlers;
-    private final TemporalStepOutcomeRegistry outcomeRegistry;
 
-    public CreateProgramActivitiesImpl(List<StepHandler> stepHandlers,
-                                       TemporalStepOutcomeRegistry outcomeRegistry) {
+    public CreateProgramActivitiesImpl(List<StepHandler> stepHandlers) {
         this.stepHandlers = stepHandlers;
-        this.outcomeRegistry = outcomeRegistry;
     }
 
     @Override
-    public StepOutcome executeStep(CreateProgramInput input, String stepName) {
+    public void executeStep(CreateProgramInput input, String stepName) {
         String attemptKey = input.getSagaId() + ":" + stepName + ":EXECUTE";
         Activity.getExecutionContext().heartbeat(attemptKey);
         StepHandler handler = findHandler(stepName);
@@ -31,7 +27,6 @@ public class CreateProgramActivitiesImpl implements CreateProgramActivities {
                 stepName,
                 "EXECUTE",
                 Map.copyOf(input.getPayload())));
-        return outcomeRegistry.await(input.getSagaId(), stepName, Duration.ofMinutes(2).toMillis());
     }
 
     @Override

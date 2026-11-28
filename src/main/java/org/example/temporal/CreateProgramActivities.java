@@ -6,7 +6,7 @@ import io.temporal.activity.ActivityMethod;
 @ActivityInterface
 public interface CreateProgramActivities {
     @ActivityMethod
-    StepOutcome executeStep(CreateProgramInput input, String stepName);
+    void executeStep(CreateProgramInput input, String stepName);
 
     @ActivityMethod
     void compensateStep(CreateProgramInput input, String stepName);

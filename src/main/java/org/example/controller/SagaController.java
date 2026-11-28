@@ -15,9 +15,9 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import org.example.temporal.TemporalIdempotencyStore;
 import io.temporal.api.enums.v1.WorkflowIdReusePolicy;
 
@@ -49,9 +49,16 @@ public class SagaController {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
                     .body(Map.of("error", "Temporal is disabled"));
         }
+        if (userId == null || userId.isBlank()
+                || idempotencyKey == null
+                || !idempotencyKey.matches("[A-Za-z0-9._~-]{1,128}")) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Invalid user identity or Idempotency-Key"));
+        }
         String canonicalPayload;
         try {
-            canonicalPayload = objectMapper.writeValueAsString(payload);
+            canonicalPayload = objectMapper.copy()
+                    .configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true)
+                    .writeValueAsString(payload);
         } catch (JsonProcessingException e) {
             throw new IllegalArgumentException("Payload cannot be serialized", e);
         }
@@ -63,13 +70,14 @@ public class SagaController {
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body(Map.of("error", "Idempotency-Key is already used with a different payload"));
         }
-        String sagaId = userId + ":" + idempotencyKey;
+        String operationId = TemporalIdempotencyStore.operationId(userId, idempotencyKey);
+        String sagaId = "temporal-" + operationId;
         CreateProgramWorkflow workflow = workflowClient.get().newWorkflowStub(
                 CreateProgramWorkflow.class,
                 WorkflowOptions.newBuilder()
                         .setTaskQueue(CreateProgramWorkflowImpl.TASK_QUEUE)
-                        .setWorkflowId("fitflow-create-program-" + sagaId)
-                        .setWorkflowExecutionTimeout(java.time.Duration.ofMinutes(5))
+                        .setWorkflowId("fitflow-create-program-" + operationId)
+                        .setWorkflowExecutionTimeout(java.time.Duration.ofMinutes(30))
                         .setWorkflowIdReusePolicy(
                                 WorkflowIdReusePolicy.WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE)
                         .build());
@@ -80,14 +88,14 @@ public class SagaController {
             if (reservation.kind() == TemporalIdempotencyStore.Reservation.Kind.REUSED) {
                 return ResponseEntity.status(HttpStatus.ACCEPTED)
                         .body(Map.of("sagaId", sagaId,
-                                "workflowId", "fitflow-create-program-" + sagaId,
+                                "workflowId", "fitflow-create-program-" + operationId,
                                 "status", "ALREADY_STARTED"));
             }
             throw e;
         }
         return ResponseEntity.status(HttpStatus.ACCEPTED)
                 .body(Map.of("sagaId", sagaId,
-                        "workflowId", "fitflow-create-program-" + sagaId));
+                        "workflowId", "fitflow-create-program-" + operationId));
     }
 
     @PostMapping("/create-program")

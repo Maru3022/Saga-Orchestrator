@@ -19,30 +19,45 @@ public class TemporalIdempotencyStore {
         this.redisTemplate = redisTemplate;
     }
 
-    public synchronized Reservation reserve(String ownerId, String idempotencyKey,
-                                            String canonicalPayload) {
+    public Reservation reserve(String ownerId, String idempotencyKey,
+                               String canonicalPayload) {
+        validate(ownerId, idempotencyKey);
         String payloadHash = sha256(canonicalPayload);
-        String key = "temporal:idempotency:" + ownerId + ":" + idempotencyKey;
-        String existing = redisTemplate.opsForValue().get(key);
-        if (existing != null) {
-            if (existing.equals(payloadHash)) {
-                return Reservation.reuse(payloadHash);
+        String redisKey = "temporal:idempotency:" + operationId(ownerId, idempotencyKey);
+        for (int attempt = 0; attempt < 3; attempt++) {
+            String existing = redisTemplate.opsForValue().get(redisKey);
+            if (existing != null) {
+                return existing.equals(payloadHash)
+                        ? Reservation.reuse(payloadHash)
+                        : Reservation.conflict(payloadHash);
             }
-            return Reservation.conflict(payloadHash);
-        }
-        Boolean set = redisTemplate.opsForValue()
-                .setIfAbsent(key, payloadHash, Duration.ofDays(7));
-        if (Boolean.FALSE.equals(set)) {
-            existing = redisTemplate.opsForValue().get(key);
-            if (existing != null && existing.equals(payloadHash)) {
-                return Reservation.reuse(payloadHash);
+
+            Boolean inserted = redisTemplate.opsForValue()
+                    .setIfAbsent(redisKey, payloadHash, Duration.ofDays(7));
+            if (Boolean.TRUE.equals(inserted)) {
+                return Reservation.created(payloadHash);
             }
-            return Reservation.conflict(payloadHash);
+            if (inserted == null) {
+                throw new IllegalStateException("Redis did not confirm the idempotency reservation");
+            }
         }
-        return Reservation.created(payloadHash);
+        throw new IllegalStateException("Could not resolve a concurrent idempotency reservation");
     }
 
-    private String sha256(String payload) {
+    public static String operationId(String ownerId, String idempotencyKey) {
+        return sha256(ownerId + "\u0000" + idempotencyKey);
+    }
+
+    private void validate(String ownerId, String idempotencyKey) {
+        if (ownerId == null || ownerId.isBlank()) {
+            throw new IllegalArgumentException("User identity is required");
+        }
+        if (idempotencyKey == null || !idempotencyKey.matches("[A-Za-z0-9._~-]{1,128}")) {
+            throw new IllegalArgumentException("Idempotency-Key must be 1-128 safe characters");
+        }
+    }
+
+    private static String sha256(String payload) {
         try {
             return HexFormat.of().formatHex(
                     MessageDigest.getInstance("SHA-256")

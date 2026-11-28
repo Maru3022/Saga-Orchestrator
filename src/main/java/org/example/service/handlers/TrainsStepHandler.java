@@ -11,6 +11,9 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 @Component
 @Slf4j
@@ -40,10 +43,16 @@ public class TrainsStepHandler implements StepHandler {
             SagaCommandEvent cmd = new SagaCommandEvent(
                     sagaId + ":" + STEP + ":" + status, sagaId, STEP, status, data);
             String json = objectMapper.writeValueAsString(cmd);
-            sagaKafkaTemplate.send(topics.getTrainsCommand(), sagaId, json);
+            sagaKafkaTemplate.send(topics.getTrainsCommand(), sagaId, json)
+                    .get(10, TimeUnit.SECONDS);
         } catch (JsonProcessingException e) {
             log.error("Failed to serialize TRAINS command for saga {}", sagaId, e);
             throw new IllegalStateException("Serialization failed", e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Interrupted while publishing TRAINS command", e);
+        } catch (ExecutionException | TimeoutException e) {
+            throw new IllegalStateException("Failed to publish TRAINS command", e);
         }
     }
 
