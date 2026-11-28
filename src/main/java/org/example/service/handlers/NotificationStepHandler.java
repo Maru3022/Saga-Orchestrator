@@ -11,7 +11,6 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
-import java.util.UUID;
 
 @Component
 @Slf4j
@@ -39,7 +38,7 @@ public class NotificationStepHandler implements StepHandler {
     private void sendCommand(String sagaId, String status, Map<String, Object> data) {
         try {
             SagaCommandEvent cmd = new SagaCommandEvent(
-                    UUID.randomUUID().toString(), sagaId, STEP, status, data);
+                    sagaId + ":" + STEP + ":" + status, sagaId, STEP, status, data);
             String json = objectMapper.writeValueAsString(cmd);
             sagaKafkaTemplate.send(topics.getNotificationCommand(), sagaId, json);
         } catch (JsonProcessingException e) {
