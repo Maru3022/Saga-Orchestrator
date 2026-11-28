@@ -31,6 +31,38 @@ public class SagaOrchestrator {
     private final ObjectMapper objectMapper;
     private final List<StepHandler> stepHandlers;
     private final SagaTopicsProperties topics;
+    private final SagaOutboxService sagaOutboxService;
+
+    @Transactional
+    public SagaState startSagaWithOutbox(String sagaType, Map<String, Object> payload, String ownerId) {
+        SagaState state = new SagaState(sagaType, payload);
+        state.setOwnerId(ownerId);
+        if (!stepHandlers.isEmpty()) {
+            state.setCurrentStep(stepHandlers.get(0).getStepName());
+        }
+        sagaStateRepository.save(state);
+
+        String sagaPayload;
+        try {
+            sagaPayload = objectMapper.writeValueAsString(payload);
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            throw new IllegalStateException("Cannot serialize saga payload", e);
+        }
+        SagaInstance instance = SagaInstance.builder()
+                .id(UUID.randomUUID())
+                .correlationId(state.getSagaId())
+                .userId(ownerId)
+                .userEmail((String) payload.getOrDefault("email", ""))
+                .sagaPayload(sagaPayload)
+                .state(SagaStatus.STARTED)
+                .currentStep(SagaStep.CREATE_USER)
+                .retryCount(0)
+                .maxRetries(3)
+                .build();
+        sagaInstanceRepository.save(instance);
+        sagaOutboxService.createForSagaInstance("CREATE_PROGRAM_REQUESTED", instance);
+        return state;
+    }
 
     @Transactional
     public void startSaga(UserCreatedEvent event) {
