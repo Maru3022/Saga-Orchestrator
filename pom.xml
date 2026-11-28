@@ -245,7 +245,7 @@
                                     </limits>
                                 </rule>
                             </rules>
-                            <haltOnFailure>false</haltOnFailure>
+                            <haltOnFailure>true</haltOnFailure>
                         </configuration>
                     </execution>
                 </executions>
