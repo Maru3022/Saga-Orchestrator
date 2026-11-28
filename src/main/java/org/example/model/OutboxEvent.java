@@ -4,8 +4,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
+import org.hibernate.annotations.ColumnTransformer;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -27,7 +26,7 @@ public class OutboxEvent {
     @Column(name = "event_type", nullable = false, length = 100)
     private String eventType;
 
-    @JdbcTypeCode(SqlTypes.JSON)
+    @ColumnTransformer(write = "cast(? as jsonb)")
     @Column(name = "payload", nullable = false, columnDefinition = "jsonb")
     private String payload;
 
