@@ -44,6 +44,7 @@ jobs:
           docker version
           docker info
           test -S /var/run/docker.sock
+          grep -Fx 'api.version=1.40' src/test/resources/docker-java.properties
       - name: Verify application
         run: mvn -B -ntp clean verify
         env:
