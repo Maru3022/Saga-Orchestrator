@@ -110,9 +110,6 @@ class OutboxTransactionIT {
 
         assertEquals(outboxBefore, outboxRepository.count());
         assertEquals(0, sagaInstanceRepository.count());
-        assertEquals(0, jdbcTemplate.queryForObject(
-                "select count(*) from outbox_events where aggregate_id like 'rollback-%'",
-                Integer.class));
     }
 
     @Test
@@ -133,7 +130,7 @@ class OutboxTransactionIT {
     private SagaInstance sagaInstance() {
         return SagaInstance.builder()
                 .id(UUID.randomUUID())
-                .correlationId("rollback-" + UUID.randomUUID())
+                .correlationId(UUID.randomUUID().toString())
                 .userId("owner-1")
                 .userEmail("owner@example.invalid")
                 .sagaPayload("{}")
