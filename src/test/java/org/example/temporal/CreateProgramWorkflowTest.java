@@ -151,8 +151,9 @@ class CreateProgramWorkflowTest {
     }
 
     @Test
-    void cancellationReachesCompensationPath() {
+    void cancellationDoesNotCompensateAnUnknownOperation() {
         activities.blockStep = "NUTRITION";
+        activities.suppressOutcomeStep = "NUTRITION";
         CreateProgramWorkflow workflow = newWorkflow("cancel");
         WorkflowStub stub = WorkflowStub.fromTyped(workflow);
         stub.start(input("cancel"));
