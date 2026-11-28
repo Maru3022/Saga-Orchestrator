@@ -187,7 +187,7 @@ class CreateProgramWorkflowTest {
         return new CreateProgramInput(id, "owner-1", Map.of("goal", "fitness"));
     }
 
-    private static class RecordingActivities implements CreateProgramActivities {
+    private class RecordingActivities implements CreateProgramActivities {
         private final List<String> executed = new ArrayList<>();
         private final List<String> compensated = new ArrayList<>();
         private String failOutcomeStep;
