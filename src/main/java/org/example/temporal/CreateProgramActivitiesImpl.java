@@ -19,30 +19,41 @@ public class CreateProgramActivitiesImpl implements CreateProgramActivities {
 
     @Override
     public void executeStep(CreateProgramInput input, String stepName) {
-        String attemptKey = input.getSagaId() + ":" + stepName + ":EXECUTE";
+        String commandId = TemporalCommandIds.forStep(input.getSagaId(), stepName, "EXECUTE");
+        String attemptKey = commandId;
         Activity.getExecutionContext().heartbeat(attemptKey);
         StepHandler handler = findHandler(stepName);
-        handler.processForward(new SagaEvent(
+        SagaEvent event = new SagaEvent(
                 input.getSagaId(),
                 stepName,
                 "EXECUTE",
-                Map.copyOf(input.getPayload())));
+                Map.copyOf(input.getPayload()));
+        event.setCommandId(commandId);
+        event.setOperation("EXECUTE");
+        event.setEventVersion(1);
+        handler.processForward(event);
     }
 
     @Override
     public void compensateStep(CreateProgramInput input, String stepName) {
-        String attemptKey = input.getSagaId() + ":" + stepName + ":ROLLBACK";
+        String commandId = TemporalCommandIds.forStep(input.getSagaId(), stepName, "COMPENSATE");
+        String attemptKey = commandId;
         Activity.getExecutionContext().heartbeat(attemptKey);
-        findHandler(stepName).processRollback(new SagaEvent(
+        SagaEvent event = new SagaEvent(
                 input.getSagaId(),
                 stepName,
                 "FAILED",
-                Map.copyOf(input.getPayload())));
+                Map.copyOf(input.getPayload()));
+        event.setCommandId(commandId);
+        event.setOperation("COMPENSATE");
+        event.setEventVersion(1);
+        findHandler(stepName).processRollback(event);
     }
 
     private StepHandler findHandler(String stepName) {
+        String handlerStep = "TRAINING".equals(stepName) ? "TRAINS" : stepName;
         return stepHandlers.stream()
-                .filter(handler -> stepName.equals(handler.getStepName()))
+                .filter(handler -> handlerStep.equals(handler.getStepName()))
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Unknown step: " + stepName));
     }

@@ -29,19 +29,28 @@ public class NotificationStepHandler implements StepHandler {
     @Override
     public void processForward(SagaEvent event) {
         log.info("Forward NOTIFICATION step for saga {}", event.getSagaId());
-        sendCommand(event.getSagaId(), "EXECUTE", event.getData());
+        sendCommand(event, "EXECUTE", "EXECUTE");
     }
 
     @Override
     public void processRollback(SagaEvent event) {
         log.info("Rollback NOTIFICATION step for saga {}", event.getSagaId());
-        sendCommand(event.getSagaId(), "ROLLBACK", event.getData());
+        sendCommand(event, "ROLLBACK", "COMPENSATE");
     }
 
-    private void sendCommand(String sagaId, String status, Map<String, Object> data) {
+    private void sendCommand(SagaEvent event, String status, String operation) {
+        String sagaId = event.getSagaId();
         try {
+            String commandId = event.getCommandId();
             SagaCommandEvent cmd = new SagaCommandEvent(
-                    sagaId + ":" + STEP + ":" + status, sagaId, STEP, status, data);
+                    commandId == null ? sagaId + ":" + STEP + ":" + status
+                            : java.util.UUID.randomUUID().toString(),
+                    sagaId, STEP, status, event.getData());
+            if (commandId != null) {
+                cmd.setCommandId(commandId);
+                cmd.setOperation(operation);
+                cmd.setEventVersion(event.getEventVersion());
+            }
             String json = objectMapper.writeValueAsString(cmd);
             sagaKafkaTemplate.send(topics.getNotificationCommand(), sagaId, json)
                     .get(10, TimeUnit.SECONDS);

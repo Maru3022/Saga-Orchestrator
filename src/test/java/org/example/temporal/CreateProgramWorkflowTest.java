@@ -1,7 +1,6 @@
 package org.example.temporal;
 
 import io.temporal.client.WorkflowClient;
-import io.temporal.client.WorkflowFailedException;
 import io.temporal.client.WorkflowOptions;
 import io.temporal.client.WorkflowStub;
 import io.temporal.testing.TestEnvironmentOptions;
@@ -11,6 +10,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -70,8 +70,7 @@ class CreateProgramWorkflowTest {
         activities.failOutcomeStep = "NUTRITION";
         CreateProgramWorkflow workflow = newWorkflow("temporary-failure");
 
-        assertThrows(WorkflowFailedException.class,
-                () -> workflow.createProgram(input("temporary-failure")));
+        assertEquals("FAILED", workflow.createProgram(input("temporary-failure")));
         assertEquals(List.of("TRAINING"), activities.compensated);
     }
 
@@ -92,10 +91,9 @@ class CreateProgramWorkflowTest {
         activities.failActivityStep = "NUTRITION";
         CreateProgramWorkflow workflow = newWorkflow("activity-failure");
 
-        assertThrows(WorkflowFailedException.class,
-                () -> workflow.createProgram(input("activity-failure")));
+        assertEquals("UNKNOWN", workflow.createProgram(input("activity-failure")));
         assertEquals(List.of("TRAINING"), activities.executed);
-        assertEquals(List.of("TRAINING"), activities.compensated);
+        assertTrue(activities.compensated.isEmpty());
     }
 
     @Test
@@ -104,20 +102,52 @@ class CreateProgramWorkflowTest {
         activities.failCompensationStep = "NUTRITION";
         CreateProgramWorkflow workflow = newWorkflow("compensation-failure");
 
-        assertThrows(WorkflowFailedException.class,
-                () -> workflow.createProgram(input("compensation-failure")));
+        assertEquals("COMPENSATION_FAILED",
+                workflow.createProgram(input("compensation-failure")));
         assertTrue(activities.compensated.contains("NUTRITION"));
         assertTrue(activities.compensated.contains("TRAINING"));
     }
 
     @Test
-    void timesOutDeterministicallyAndCompensatesAnAmbiguousStep() {
+    void leavesTimedOutStepUnknownWithoutStartingAnyCompensation() {
         activities.suppressOutcomeStep = "NUTRITION";
         CreateProgramWorkflow workflow = newWorkflow("outcome-timeout");
 
-        assertThrows(WorkflowFailedException.class,
-                () -> workflow.createProgram(input("outcome-timeout")));
-        assertEquals(List.of("NUTRITION", "TRAINING"), activities.compensated);
+        assertEquals("UNKNOWN", workflow.createProgram(input("outcome-timeout")));
+        assertTrue(activities.compensated.isEmpty());
+    }
+
+    @Test
+    void acceptsSuccessAfterTheInitialOutcomeTimeout() {
+        activities.lateOutcomeStep = "NUTRITION";
+        CreateProgramWorkflow workflow = newWorkflow("late-success");
+        environment.registerDelayedCallback(
+                Duration.ofMinutes(2).plusSeconds(30),
+                () -> assertEquals(
+                        StepState.UNKNOWN,
+                        workflow.getStepStates().get("NUTRITION:EXECUTE")));
+
+        assertEquals("COMPLETED", workflow.createProgram(input("late-success")));
+        assertTrue(activities.compensated.isEmpty());
+    }
+
+    @Test
+    void doesNotCompensateWhenProducerAckIsLostAfterDownstreamSuccess() {
+        activities.publishThenFailStep = "NUTRITION";
+        CreateProgramWorkflow workflow = newWorkflow("ack-lost");
+
+        assertEquals("COMPLETED", workflow.createProgram(input("ack-lost")));
+        assertTrue(activities.compensated.isEmpty());
+    }
+
+    @Test
+    void stopsCompensationWhenItsOutcomeIsUnknown() {
+        activities.failOutcomeStep = "NOTIFICATION";
+        activities.suppressCompensationOutcomeStep = "NUTRITION";
+        CreateProgramWorkflow workflow = newWorkflow("compensation-unknown");
+
+        assertEquals("UNKNOWN", workflow.createProgram(input("compensation-unknown")));
+        assertEquals(List.of("NUTRITION"), activities.compensated);
     }
 
     @Test
@@ -135,7 +165,7 @@ class CreateProgramWorkflowTest {
         stub.cancel();
         activities.releaseBlockedStep.countDown();
         assertThrows(Exception.class, () -> stub.getResult(String.class));
-        assertEquals(List.of("NUTRITION", "TRAINING"), activities.compensated);
+        assertTrue(activities.compensated.isEmpty());
     }
 
     private CreateProgramWorkflow newWorkflow(String id) {
@@ -148,6 +178,8 @@ class CreateProgramWorkflowTest {
                 WorkflowOptions.newBuilder()
                         .setTaskQueue(CreateProgramWorkflowImpl.TASK_QUEUE)
                         .setWorkflowId(workflowId)
+                        .setWorkflowExecutionTimeout(
+                                TemporalTimeouts.WORKFLOW_EXECUTION_TIMEOUT)
                         .build());
     }
 
@@ -162,6 +194,9 @@ class CreateProgramWorkflowTest {
         private String failActivityStep;
         private String temporaryFailureThenSuccessStep;
         private String failCompensationStep;
+        private String lateOutcomeStep;
+        private String publishThenFailStep;
+        private String suppressCompensationOutcomeStep;
         private int temporaryAttempt;
         private String blockStep;
         private String suppressOutcomeStep;
@@ -181,7 +216,16 @@ class CreateProgramWorkflowTest {
             executed.add(stepName);
             awaitReleaseIfBlocked(stepName);
             boolean success = !stepName.equals(failOutcomeStep);
-            if (!stepName.equals(suppressOutcomeStep)) {
+            if (stepName.equals(publishThenFailStep)) {
+                signalReceiver.accept(signal(input, stepName, "EXECUTE", "SUCCESS"));
+                throw new IllegalStateException("Producer acknowledgement was lost");
+            }
+            if (stepName.equals(lateOutcomeStep)) {
+                environment.registerDelayedCallback(
+                        Duration.ofMinutes(3),
+                        () -> signalReceiver.accept(
+                                signal(input, stepName, "EXECUTE", "SUCCESS")));
+            } else if (!stepName.equals(suppressOutcomeStep)) {
                 signalReceiver.accept(signal(input, stepName, "EXECUTE",
                         success ? "SUCCESS" : "FAILED"));
                 if (duplicateSignals) {
@@ -195,8 +239,10 @@ class CreateProgramWorkflowTest {
         public void compensateStep(CreateProgramInput input, String stepName) {
             compensated.add(stepName);
             boolean success = !stepName.equals(failCompensationStep);
-            signalReceiver.accept(signal(input, stepName, "COMPENSATE",
-                    success ? "ROLLBACK_DONE" : "FAILED"));
+            if (!stepName.equals(suppressCompensationOutcomeStep)) {
+                signalReceiver.accept(signal(input, stepName, "COMPENSATE",
+                        success ? "ROLLBACK_DONE" : "FAILED"));
+            }
         }
 
         private boolean duplicateSignals;

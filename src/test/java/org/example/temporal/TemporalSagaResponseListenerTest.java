@@ -1,7 +1,9 @@
 package org.example.temporal;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.temporal.api.common.v1.WorkflowExecution;
 import io.temporal.client.WorkflowClient;
+import io.temporal.client.WorkflowNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.example.model.SagaResponseEvent;
@@ -69,8 +71,39 @@ class TemporalSagaResponseListenerTest {
     }
 
     @Test
+    void acknowledgesLateOutcomeForWorkflowNoLongerRetained() {
+        doThrow(new WorkflowNotFoundException(
+                WorkflowExecution.newBuilder()
+                        .setWorkflowId("fitflow-create-program-operation-1")
+                        .build(),
+                "default",
+                null))
+                .when(workflow).receiveOutcome(any(StepOutcomeSignal.class));
+
+        org.junit.jupiter.api.Assertions.assertDoesNotThrow(
+                () -> listener.onResponse(response("temporal-operation-1", "TRAINING", "SUCCESS")));
+    }
+
+    @Test
     void rejectsMalformedResponseJson() {
         assertThrows(IllegalArgumentException.class, () -> listener.onResponse("{"));
+        verifyNoInteractions(workflowClient);
+    }
+
+    @Test
+    void ignoresResponseWithMismatchedCommandOrOperation() {
+        listener.onResponse("{\"eventId\":\"response-1\",\"sagaId\":\"temporal-operation-1\","
+                + "\"step\":\"TRAINING\",\"status\":\"SUCCESS\",\"commandId\":\"wrong\","
+                + "\"operation\":\"EXECUTE\",\"eventVersion\":1}");
+        listener.onResponse("{\"eventId\":\"response-1\",\"sagaId\":\"temporal-operation-1\","
+                + "\"step\":\"TRAINING\",\"status\":\"SUCCESS\","
+                + "\"commandId\":\"temporal-operation-1:TRAINS:EXECUTE\","
+                + "\"operation\":\"COMPENSATE\",\"eventVersion\":1}");
+        listener.onResponse("{\"eventId\":\"response-1\",\"sagaId\":\"temporal-operation-1\","
+                + "\"step\":\"TRAINING\",\"status\":\"SUCCESS\","
+                + "\"commandId\":\"temporal-operation-1:TRAINS:EXECUTE\","
+                + "\"operation\":\"EXECUTE\",\"eventVersion\":2}");
+
         verifyNoInteractions(workflowClient);
     }
 
@@ -81,7 +114,13 @@ class TemporalSagaResponseListenerTest {
     }
 
     private String response(String sagaId, String step, String status) {
+        String normalizedStep = "TRAINING".equals(step) ? "TRAINS" : step;
+        String operation = "ROLLBACK_DONE".equals(status) ? "COMPENSATE" : "EXECUTE";
+        String commandOperation = "COMPENSATE".equals(operation) ? "ROLLBACK" : "EXECUTE";
         return "{\"eventId\":\"response-1\",\"sagaId\":\"" + sagaId
-                + "\",\"step\":\"" + step + "\",\"status\":\"" + status + "\"}";
+                + "\",\"step\":\"" + step + "\",\"status\":\"" + status
+                + "\",\"commandId\":\"" + sagaId + ":" + normalizedStep + ":"
+                + commandOperation + "\",\"operation\":\"" + operation
+                + "\",\"eventVersion\":1}";
     }
 }

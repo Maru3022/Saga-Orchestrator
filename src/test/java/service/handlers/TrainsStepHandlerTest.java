@@ -2,6 +2,7 @@ package service.handlers;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.example.config.SagaTopicsProperties;
+import org.example.model.SagaCommandEvent;
 import org.example.model.SagaEvent;
 import org.example.service.handlers.TrainsStepHandler;
 import org.junit.jupiter.api.BeforeEach;
@@ -74,5 +75,27 @@ class TrainsStepHandlerTest {
         assertThrows(IllegalStateException.class,
                 () -> handler.processForward(new SagaEvent(
                         "saga-1", "TRAINS", "EXECUTE", Map.of("data", "value"))));
+    }
+
+    @Test
+    void temporalCommandCarriesStableCommandIdAndCompensationOperation() throws Exception {
+        ObjectMapper mapper = new ObjectMapper();
+        when(objectMapper.writeValueAsString(any())).thenAnswer(invocation ->
+                mapper.writeValueAsString(invocation.getArgument(0)));
+        SagaEvent event = new SagaEvent("temporal-operation-1", "TRAINING", "FAILED",
+                Map.of("userId", "owner-1"));
+        event.setCommandId("temporal-operation-1:TRAINS:ROLLBACK");
+        event.setOperation("COMPENSATE");
+        event.setEventVersion(1);
+
+        handler.processRollback(event);
+
+        var payload = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(kafkaTemplate).send(eq("saga-trains-command"), eq("temporal-operation-1"), payload.capture());
+        SagaCommandEvent command = mapper.readValue(payload.getValue(), SagaCommandEvent.class);
+        assertEquals("temporal-operation-1:TRAINS:ROLLBACK", command.getCommandId());
+        assertEquals("COMPENSATE", command.getOperation());
+        assertEquals(1, command.getEventVersion());
+        assertEquals("ROLLBACK", command.getStatus());
     }
 }

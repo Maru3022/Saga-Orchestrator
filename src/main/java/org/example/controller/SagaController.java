@@ -19,6 +19,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import org.example.temporal.TemporalIdempotencyStore;
+import org.example.temporal.TemporalTimeouts;
 import io.temporal.api.enums.v1.WorkflowIdReusePolicy;
 
 @RestController
@@ -77,7 +78,7 @@ public class SagaController {
                 WorkflowOptions.newBuilder()
                         .setTaskQueue(CreateProgramWorkflowImpl.TASK_QUEUE)
                         .setWorkflowId("fitflow-create-program-" + operationId)
-                        .setWorkflowExecutionTimeout(java.time.Duration.ofMinutes(30))
+                        .setWorkflowExecutionTimeout(TemporalTimeouts.WORKFLOW_EXECUTION_TIMEOUT)
                         .setWorkflowIdReusePolicy(
                                 WorkflowIdReusePolicy.WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE)
                         .build());
