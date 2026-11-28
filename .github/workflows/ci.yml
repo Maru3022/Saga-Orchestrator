@@ -18,6 +18,8 @@ jobs:
     name: CI
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      DOCKER_HOST: unix:///var/run/docker.sock
     services:
       redis:
         image: redis:7-alpine
@@ -37,12 +39,21 @@ jobs:
           distribution: temurin
           java-version: ${{ env.JAVA_VERSION }}
           cache: maven
+      - name: Verify Docker engine for mandatory integration tests
+        run: |
+          docker version
+          docker info
+          test -S /var/run/docker.sock
       - name: Verify application
         run: mvn -B -ntp clean verify
         env:
           SPRING_PROFILES_ACTIVE: test
           SPRING_DATA_REDIS_HOST: localhost
           SPRING_DATA_REDIS_PORT: 6379
+      - name: Require PostgreSQL outbox integration tests to execute
+        shell: bash
+        run: |
+          python3 -c 'import sys, xml.etree.ElementTree as ET; p="target/failsafe-reports/TEST-org.example.integration.OutboxTransactionIT.xml"; r=ET.parse(p).getroot(); values={k:int(r.attrib.get(k, "0")) for k in ("tests", "failures", "errors", "skipped")}; print(f"OutboxTransactionIT: {values}"); sys.exit(0 if values["tests"] >= 3 and values["failures"] == 0 and values["errors"] == 0 and values["skipped"] == 0 else 1)'
       - name: Install kubeconform
         shell: bash
         run: |
@@ -102,4 +113,3 @@ jobs:
           digest="$(printf '%s\n' "$push_output" | awk '/digest: sha256:/ {print $2}' | tail -1)"
           test -n "$digest"
           echo "image=${image}@${digest}" >> "$GITHUB_OUTPUT"
-
