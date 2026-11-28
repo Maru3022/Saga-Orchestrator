@@ -36,9 +36,10 @@ class SagaOrchestratorTest {
         var sagaInstanceRepository = mock(org.example.repository.SagaInstanceRepository.class);
         var kafkaTemplate = mock(org.springframework.kafka.core.KafkaTemplate.class);
         var objectMapper = mock(com.fasterxml.jackson.databind.ObjectMapper.class);
+        var outboxService = mock(org.example.service.SagaOutboxService.class);
 
         orchestrator = new SagaOrchestrator(sagaInstanceRepository, repository, kafkaTemplate, objectMapper,
-            List.of(stepHandler1, stepHandler2), sagaTopicsProperties);
+            List.of(stepHandler1, stepHandler2), sagaTopicsProperties, outboxService);
     }
 
     @Test
