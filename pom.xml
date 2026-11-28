@@ -25,6 +25,7 @@
         <spring-cloud.version>2023.0.2</spring-cloud.version>
         <lombok.version>1.18.32</lombok.version>
         <jacoco.version>0.8.12</jacoco.version>
+        <temporal.version>1.41.1</temporal.version>
     </properties>
 
     <dependencies>
@@ -119,6 +120,17 @@
         <dependency>
             <groupId>org.awaitility</groupId>
             <artifactId>awaitility</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.temporal</groupId>
+            <artifactId>temporal-sdk</artifactId>
+            <version>${temporal.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.temporal</groupId>
+            <artifactId>temporal-testing</artifactId>
+            <version>${temporal.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -233,7 +245,7 @@
                                     </limits>
                                 </rule>
                             </rules>
-                            <haltOnFailure>false</haltOnFailure>
+                            <haltOnFailure>true</haltOnFailure>
                         </configuration>
                     </execution>
                 </executions>

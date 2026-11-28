@@ -9,6 +9,9 @@ public class SagaEvent implements Serializable {
     private String stepName;
     private String status;
     private Map<String, Object> data;
+    private String commandId;
+    private String operation;
+    private Integer eventVersion;
 
     public SagaEvent() {}
 
@@ -50,4 +53,11 @@ public class SagaEvent implements Serializable {
     public void setData(Map<String, Object> data) {
         this.data = data;
     }
+
+    public String getCommandId() { return commandId; }
+    public void setCommandId(String commandId) { this.commandId = commandId; }
+    public String getOperation() { return operation; }
+    public void setOperation(String operation) { this.operation = operation; }
+    public Integer getEventVersion() { return eventVersion; }
+    public void setEventVersion(Integer eventVersion) { this.eventVersion = eventVersion; }
 }

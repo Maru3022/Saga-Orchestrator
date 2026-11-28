@@ -71,4 +71,37 @@ class SagaControllerTest {
                         .header("X-User-Id", "attacker"))
                 .andExpect(status().isForbidden());
     }
+
+    @Test
+    void shouldReturnNotFoundWhenSagaDoesNotExist() throws Exception {
+        Mockito.when(sagaStateRepository.findById("missing")).thenReturn(java.util.Optional.empty());
+
+        mockMvc.perform(get("/api/v1/sagas/missing")
+                        .header("X-User-Id", "user-123"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void shouldReturnSagaForItsOwner() throws Exception {
+        SagaState state = new SagaState(SagaOrchestrator.SAGA_TYPE, Map.of("goal", "fitness"));
+        state.setSagaId("saga-1");
+        state.setOwnerId("user-123");
+        Mockito.when(sagaStateRepository.findById("saga-1")).thenReturn(java.util.Optional.of(state));
+
+        mockMvc.perform(get("/api/v1/sagas/saga-1")
+                        .header("X-User-Id", "user-123"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sagaId").value("saga-1"));
+    }
+
+    @Test
+    void shouldReturnUnavailableWhenTemporalIsDisabled() throws Exception {
+        mockMvc.perform(post("/api/v1/sagas/temporal/create-program")
+                        .header("X-User-Id", "user-123")
+                        .header("Idempotency-Key", "request-1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"goal\":\"fitness\"}"))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.error").value("Temporal is disabled"));
+    }
 }

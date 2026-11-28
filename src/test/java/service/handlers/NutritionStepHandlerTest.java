@@ -12,6 +12,7 @@ import org.mockito.MockitoAnnotations;
 import org.springframework.kafka.core.KafkaTemplate;
 
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
@@ -40,6 +41,8 @@ class NutritionStepHandlerTest {
         MockitoAnnotations.openMocks(this);
         when(objectMapper.writeValueAsString(any())).thenReturn("{}");
         when(sagaTopicsProperties.getNutritionCommand()).thenReturn("saga-nutrition-command");
+        when(kafkaTemplate.send(anyString(), anyString(), anyString()))
+                .thenReturn(CompletableFuture.completedFuture(null));
     }
 
     @Test

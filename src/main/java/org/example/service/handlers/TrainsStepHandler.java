@@ -11,7 +11,9 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
-import java.util.UUID;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 @Component
 @Slf4j
@@ -27,24 +29,39 @@ public class TrainsStepHandler implements StepHandler {
     @Override
     public void processForward(SagaEvent event) {
         log.info("Forward TRAINS step for saga {}", event.getSagaId());
-        sendCommand(event.getSagaId(), "EXECUTE", event.getData());
+        sendCommand(event, "EXECUTE", "EXECUTE");
     }
 
     @Override
     public void processRollback(SagaEvent event) {
         log.info("Rollback TRAINS step for saga {}", event.getSagaId());
-        sendCommand(event.getSagaId(), "ROLLBACK", event.getData());
+        sendCommand(event, "ROLLBACK", "COMPENSATE");
     }
 
-    private void sendCommand(String sagaId, String status, Map<String, Object> data) {
+    private void sendCommand(SagaEvent event, String status, String operation) {
+        String sagaId = event.getSagaId();
         try {
+            String commandId = event.getCommandId();
             SagaCommandEvent cmd = new SagaCommandEvent(
-                    UUID.randomUUID().toString(), sagaId, STEP, status, data);
+                    commandId == null ? sagaId + ":" + STEP + ":" + status
+                            : java.util.UUID.randomUUID().toString(),
+                    sagaId, STEP, status, event.getData());
+            if (commandId != null) {
+                cmd.setCommandId(commandId);
+                cmd.setOperation(operation);
+                cmd.setEventVersion(event.getEventVersion());
+            }
             String json = objectMapper.writeValueAsString(cmd);
-            sagaKafkaTemplate.send(topics.getTrainsCommand(), sagaId, json);
+            sagaKafkaTemplate.send(topics.getTrainsCommand(), sagaId, json)
+                    .get(10, TimeUnit.SECONDS);
         } catch (JsonProcessingException e) {
             log.error("Failed to serialize TRAINS command for saga {}", sagaId, e);
             throw new IllegalStateException("Serialization failed", e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Interrupted while publishing TRAINS command", e);
+        } catch (ExecutionException | TimeoutException e) {
+            throw new IllegalStateException("Failed to publish TRAINS command", e);
         }
     }
 
