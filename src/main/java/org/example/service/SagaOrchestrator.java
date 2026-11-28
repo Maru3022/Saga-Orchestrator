@@ -40,8 +40,6 @@ public class SagaOrchestrator {
         if (!stepHandlers.isEmpty()) {
             state.setCurrentStep(stepHandlers.get(0).getStepName());
         }
-        sagaStateRepository.save(state);
-
         String sagaPayload;
         try {
             sagaPayload = objectMapper.writeValueAsString(payload);
@@ -60,7 +58,7 @@ public class SagaOrchestrator {
                 .maxRetries(3)
                 .build();
         sagaInstanceRepository.save(instance);
-        sagaOutboxService.createForSagaInstance("CREATE_PROGRAM_REQUESTED", instance);
+        sagaOutboxService.createForSagaInstance("CREATE_PROGRAM_REQUESTED", instance, state);
         return state;
     }
 

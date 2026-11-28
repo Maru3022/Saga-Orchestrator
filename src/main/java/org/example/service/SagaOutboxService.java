@@ -7,6 +7,7 @@ import org.example.model.SagaState;
 import org.example.model.SagaInstance;
 import org.example.repository.OutboxEventRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -14,10 +15,14 @@ public class SagaOutboxService {
 
     private final OutboxEventRepository repository;
     private final ObjectMapper objectMapper;
+    private final ApplicationEventPublisher eventPublisher;
 
-    public SagaOutboxService(OutboxEventRepository repository, ObjectMapper objectMapper) {
+    public SagaOutboxService(OutboxEventRepository repository,
+                             ObjectMapper objectMapper,
+                             ApplicationEventPublisher eventPublisher) {
         this.repository = repository;
         this.objectMapper = objectMapper;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional
@@ -36,7 +41,9 @@ public class SagaOutboxService {
     }
 
     @Transactional
-    public OutboxEvent createForSagaInstance(String eventType, SagaInstance sagaInstance) {
+    public OutboxEvent createForSagaInstance(String eventType,
+                                             SagaInstance sagaInstance,
+                                             org.example.model.SagaState sagaState) {
         try {
             String payload = objectMapper.writeValueAsString(sagaInstance);
             OutboxEvent event = new OutboxEvent(
@@ -44,7 +51,9 @@ public class SagaOutboxService {
                     sagaInstance.getCorrelationId(),
                     eventType,
                     payload);
-            return repository.save(event);
+            OutboxEvent saved = repository.save(event);
+            eventPublisher.publishEvent(new SagaOutboxCommittedEvent(sagaState));
+            return saved;
         } catch (JsonProcessingException e) {
             throw new IllegalStateException("Cannot serialize outbox event", e);
         }
