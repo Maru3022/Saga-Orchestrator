@@ -57,11 +57,25 @@ spec:
         prometheus.io/port: "8090"
         prometheus.io/path: "/actuator/prometheus"
     spec:
+      terminationGracePeriodSeconds: 75
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+        seccompProfile:
+          type: RuntimeDefault
       serviceAccountName: saga-orchestrator
       containers:
       - name: saga-orchestrator
         image: saga-orchestrator:latest
         imagePullPolicy: IfNotPresent
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        - name: config-volume
+          mountPath: /app/config
+          readOnly: true
         ports:
         - name: http
           containerPort: 8090
@@ -75,7 +89,11 @@ spec:
         - name: SPRING_PROFILES_ACTIVE
           value: "prod"
         - name: JAVA_TOOL_OPTIONS
-          value: "-XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+ParallelRefProcEnabled"
+          value: "-XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+ParallelRefProcEnabled -Djava.io.tmpdir=/tmp -Dserver.tomcat.basedir=/tmp/tomcat"
+        - name: SERVER_SHUTDOWN
+          value: graceful
+        - name: SPRING_LIFECYCLE_TIMEOUT_PER_SHUTDOWN_PHASE
+          value: 45s
         envFrom:
         - configMapRef:
             name: saga-orchestrator-config
@@ -113,11 +131,16 @@ spec:
               - sh
               - -c
               - sleep 15
-        volumeMounts:
-        - name: config-volume
-          mountPath: /app/config
-          readOnly: true
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
       volumes:
+      - name: tmp
+        emptyDir:
+          sizeLimit: 64Mi
       - name: config-volume
         configMap:
           name: saga-orchestrator-config
