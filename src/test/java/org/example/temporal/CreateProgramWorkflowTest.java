@@ -88,6 +88,17 @@ class CreateProgramWorkflowTest {
     }
 
     @Test
+    void doesNotCompensateAStepWhoseActivityNeverSucceeded() {
+        activities.failActivityStep = "NUTRITION";
+        CreateProgramWorkflow workflow = newWorkflow("activity-failure");
+
+        assertThrows(WorkflowFailedException.class,
+                () -> workflow.createProgram(input("activity-failure")));
+        assertEquals(List.of("TRAINING"), activities.executed);
+        assertEquals(List.of("TRAINING"), activities.compensated);
+    }
+
+    @Test
     void compensationContinuesWhenOneCompensationFails() {
         activities.failOutcomeStep = "NOTIFICATION";
         activities.failCompensationStep = "NUTRITION";
@@ -148,6 +159,7 @@ class CreateProgramWorkflowTest {
         private final List<String> executed = new ArrayList<>();
         private final List<String> compensated = new ArrayList<>();
         private String failOutcomeStep;
+        private String failActivityStep;
         private String temporaryFailureThenSuccessStep;
         private String failCompensationStep;
         private int temporaryAttempt;
@@ -160,6 +172,9 @@ class CreateProgramWorkflowTest {
 
         @Override
         public void executeStep(CreateProgramInput input, String stepName) {
+            if (stepName.equals(failActivityStep)) {
+                throw new IllegalStateException("Permanent activity failure");
+            }
             if (stepName.equals(temporaryFailureThenSuccessStep) && temporaryAttempt++ == 0) {
                 throw new IllegalStateException("Transient failure");
             }

@@ -46,8 +46,8 @@ public class CreateProgramWorkflowImpl implements CreateProgramWorkflow {
         status = "IN_PROGRESS";
         try {
             for (String step : List.of("TRAINING", "NUTRITION", "NOTIFICATION")) {
-                completed.add(step);
                 activities.executeStep(input, step);
+                completed.add(step);
                 StepOutcome outcome = awaitOutcome(input, step, "EXECUTE");
                 if (outcome == null) {
                     status = "COMPENSATING";
